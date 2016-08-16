@@ -5,6 +5,7 @@
 \usepackage{amsmath}
 \usepackage{stmaryrd}
 \usepackage{amsthm}
+\usepackage[dvinames]{xcolor}
 
 \newtheorem{theorem}{Theorem}
 
@@ -210,26 +211,85 @@ Let us have a firs na\"ive attempt at defining these logical
 predicates.
 \[
 \begin{array}{lll}
+\semtyp{}{\Omega \vdash \alpha}^{\xi} &\defeq& \xi(\alpha)\\
 \semtyp{}{\Omega \vdash \UNT}^{\xi}(v) &\defeq& v = \TT\\
-\semtyp{}{\Omega \vdash \tau_1 \times \tau_2} &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
-\semtyp{}{\Omega \vdash \tau_1}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}(v_2)\\
-\semtyp{}{\Omega \vdash \tau_1 \to \tau_2} &\defeq& \exists e, v = \lambda x.~e\land
-\forall v'.~\semtyp{}{\Omega \vdash \tau_1}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}}(e[v/x])\\
-\semtyp{}{\forall \alpha.~\tau} &\defeq& \exists e, v = \Lambda~e\land
-\forall \tau'. \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}}(e[v/x])
+\semtyp{}{\Omega \vdash \tau_1 \times \tau_2}^{\xi}(v) &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
+\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_2)\\
+\semtyp{}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(v) &\defeq& \exists e, v = \lambda x.~e\land
+\forall v'.~\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(e[v/x])\\
+\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(v) &\defeq& \exists e, v = \Lambda~e\land
+\forall \tau'.~\mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}}(e) \hspace{1em} {\color{red}(incorrect)}
 \end{array}
 \]
-where $\mathbf{Safe}_{P}(e)$ for a predicate $P$ on values is defined as
+where $[\alpha \mapsto P]\xi$ is extending the partial mapping $\xi$ by additionally mapping $\alpha$ to $P$ and $\mathbf{Safe}_{P}(e)$ for a predicate $P$ on values is defined as
 \[
 \mathbf{Safe}_{P}(e) \defeq \forall e'.~ e \leadsto^* (e'
 \Rightarrow e' \in \VAL \land P(e')) \lor \exists e''.~e\leadsto e''
 \]
-\paragraph{Safety logical predicates on expressions $\left(\semtyp{\EXP}{\tau}\right)$:}
+
+The problem with the case $\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}$ is that this case is not \emph{exactly recursive}.
+In other words, $\tau'$ is not a (inductively-defined)
+constituent of $\forall \alpha.~\tau$.
+Notice that it is provable (and we will indeed use this fact later)
+that
 \[
-\semtyp{\EXP}{\tau} \defeq \mathbf{Safe}_{\semtyp{}{\tau}}(e)
+\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}
+\equiv
+\semtyp{}{\alpha, \Omega \vdash \forall \alpha.~\tau}^
+{[\alpha \mapsto \semtyp{}{\Omega \vdash \tau'.~\tau}^{\xi}]\xi}
+\]
+and it might seem that if we replace the left hand side with
+the right hand side, in the definition above, the problem is solved.
+However, the problem is deeper than a syntactical problem with
+the predicate not being syntactically recursively defined.
+In fact, there is nothing in this definition restricting the choice of
+$\tau'$. We can for example take $\tau'$ to be $\forall \alpha.~\tau$. This unrestricted choice of $\tau'$ is the essence of the problem.
+
+There are two ways that we can address this issue.
+A syntactical approach and a rather meta theoretical observation.
+Syntactically we can stratify types into an infinite hierarchy of types.
+\[\mathsf{Tp}_0, \mathsf{Tp}_1, \dots\]
+We would then restrict that $\mathsf{Tp}_0$ has no types that include polymorphic types (types of the form $\forall \alpha.~\tau$).
+Furthermore, for any type $\forall \alpha.~\tau$ that belongs to
+$\mathsf{Tp}_{n+1}$, only a $\tau'$ in $\mathsf{Tp}_n$ can be
+used to substitute $\alpha$ in the typing rules.
+This allows us define the logical relations of system F by recursion on the $\mathsf{Tp}$'s and the structure of types in a
+nested fashion.
+This approach will certainly work and allow us to prove type safety (and when the logical predicates are adjusted
+appropriately) to prove (strong) normalization for system F.
+This way of treating polymorphic types is usually referred to
+as \emph{predicative} polymorphism.
+This is the approach taken in languages such as Coq and Agda.
+
+We can however, treat polymorphic types in an
+\emph{impredicative} way, i.e., not restrict what can be
+substituted for in a polymorphic type ($\tau'$ above).
+This is based on a (as alluded to earlier) meta theoretical
+observation (akin to the fact lambdas are functions above).
+This meta level observation is that polymorphic types are
+not quantifying over all of the types of the language but rather
+they are quantifying over all possible types (including those that possibly have no syntactical counterpart in our language).
+The new logical predicates for system F is as follows:
+
+\[
+\begin{array}{lll}
+\semtyp{}{\Omega \vdash \alpha}^{\xi} &\defeq& \xi(\alpha)\\
+\semtyp{}{\Omega \vdash \UNT}^{\xi}(v) &\defeq& v = \TT\\
+\semtyp{}{\Omega \vdash \tau_1 \times \tau_2}^{\xi}(v) &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
+\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_2)\\
+\semtyp{}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(v) &\defeq& \exists e, v = \lambda x.~e\land
+\forall v'.~\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(e[v/x])\\
+\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(v) &\defeq& \exists e, v = \Lambda~e\land
+\forall P \subseteq 2^{\VAL}.~\mathbf{Safe}_{\semtyp{}{\alpha, \Omega \vdash \tau}^{[\alpha \mapsto P]\xi}}(e)
+\end{array}
 \]
 
-\paragraph{Note:} It is obvious that $\semtyp{\EXP}{\tau}$
+\paragraph{Safety logical predicates on expressions $\left(\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}\right)$:}
+\[
+\semtyp{\EXP}{\Omega \vdash \tau}^{\xi} \defeq \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau}^{\xi}}(e)
+\]
+
+\paragraph{Note:} It is obvious that $\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}$
 defined above implies $\mathbf{Safe}(e)$.
 
 \paragraph{Attempt 2:} Let us have another attempt at proving this property by proving
