@@ -1,0 +1,137 @@
+\documentclass{article}
+\usepackage{newcent}
+\usepackage{geometry}
+\usepackage{amssymb}
+
+\title{Logical relations: safety of simply-typed lambda calculus}
+\author{Amin Timany}
+\date{\today}
+
+\newcommand{\gor}{~|~}
+\newcommand{\fst}{\mathit{fst}}
+\newcommand{\snd}{\mathit{snd}}
+\newcommand{\TT}{\mathit{tt}}
+\newcommand{\VAR}{\mathsf{Var}}
+\newcommand{\EXP}{\mathsf{E}}
+\newcommand{\VAL}{\mathsf{Val}}
+\newcommand{\TYP}{\mathsf{Typ}}
+\newcommand{\UNT}{()}
+\newcommand{\TCTX}{\mathsf{TCtx}}
+\newcommand{\ECTX}{\mathsf{ECtx}}
+\newcommand{\ectx}{\mathbf{K}}
+\begin{document}
+\maketitle
+
+\paragraph{Note:} in these notes, we simply ignore the issues
+regarding the clash between variable names, e.g., capturing, by
+assuming that bound variables are renamed whenever necessary
+to avoid such problems.
+
+\section{Language}
+\subsection{Syntax}
+\[
+\begin{array}{llll}
+\textit{variables}(\VAR) & \multicolumn{3}{l}{x, y, z, \dots}\\
+\textit{expressions}(\EXP) & e &::=& x \gor \TT \gor (e, e)
+\gor \fst~e \gor \snd~e \gor \lambda x.~e \gor e~e\\
+\textit{values}(\VAL) & v &::=& \TT \gor (v, v) \gor \lambda x.~e
+\end{array}
+\]
+The set of values is a subset of the set of expressions: $\VAL \subset \EXP$.
+
+\subsection{Types and typing}
+\[
+\begin{array}{llll}
+\textit{types}(\TYP) & \tau &::=& \UNT \gor \tau \times \tau 
+\gor \tau \to \tau
+\end{array}
+\]
+We consider typing contexts as unordered sequences associating
+variables to types.
+\[
+\begin{array}{llll}
+\textit{typing context}(\TCTX) & \Gamma &::=& \cdot \gor x : \tau, \Gamma 
+\end{array}
+\]
+Typing rules for our simply-typed lambda calculus(STLC) are:
+\[
+\frac{}{\Gamma \vdash \TT : \UNT}
+\hspace{2em}
+\frac{x : \tau \in \Gamma}{\Gamma \vdash x : \tau}
+\hspace{2em}
+\frac{\Gamma \vdash e_1 : \tau_1 \hspace{1em}
+\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}
+\hspace{2em}
+\frac{\Gamma \vdash e_1 : \tau_1 \hspace{1em}
+\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}
+\]
+\[
+\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \fst~e : \tau_1}
+\hspace{2em}
+\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \snd~e : \tau_2}
+\hspace{2em}
+\frac{x : \tau_1, \Gamma \vdash e : \tau_2}{\Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}
+\]
+we write $e : \tau$ as a shorthand for $\cdot \vdash e : \tau$.
+\subsection{Operational semantics (CBV)}
+We describe the small-step call-by-value (CBV) operational semantics for STLC. We do this in a way that in two steps. This is  more-or-less the standard for describing the semantics of a CBV language.
+In the first step we give the head reduction relation ($\leadsto$).
+In the second step we extend this to non-head reductions using
+evaluation context ($\ECTX$).
+
+\paragraph{Head reduction:}
+\[
+\fst~(v_1, v_2) \leadsto v_1 \hspace{2em}
+\snd~(v_1, v_2) \leadsto v_2 \hspace{2em}
+(\lambda x.~e)~v \leadsto e[v/x]
+\]
+Note that here $v$'s are values \emph{and not any expression}.
+$e[v/x]$ is the expression $e$ where all instances of $x$ are
+replaced with $v$. \emph{Remember that all substitutions are capture avoiding}.
+\paragraph{Non-head reduction:} If the redex (what is being reduced) is not in the head position (see above) then evaluation contexts determine where in the term a reduction can happen.
+\[
+\frac{e \leadsto e'}{\ectx[e] \leadsto \ectx[e']}
+\]
+where $\ectx$ is an evaluation context, i.e., $\ectx \in \ECTX$
+and $\ectx[e]$ is the expression where the single whole in the context $\ectx$ (see below) is substituted with $e$.
+
+\paragraph{Evaluation Contexts:}
+\[
+\begin{array}{llll}
+\textit{evaluation contexts}(\ECTX) &\ectx &::=& [\cdot]
+\gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, e) \gor (v, \ectx)
+\gor \ectx~e \gor v~\ectx
+\end{array}
+\]
+
+\paragraph{Example:} The following is the only possible reduction
+for the expression:
+\[
+\fst~((\lambda x.~((\lambda y.~ \TT)~x, (\lambda y.~ x)~\TT))~\TT)
+\]
+
+\[
+\fst~((\lambda x.~((\lambda y.~ \TT)~x, (\lambda y.~ x)~\TT))~\TT) \leadsto
+\fst~((\lambda y.~ \TT)~\TT, (\lambda y.~ \TT)~\TT) \leadsto
+\fst~(\TT, (\lambda y.~ \TT)~\TT)
+\]
+\[
+\leadsto \fst~(\TT, \TT) \leadsto \TT
+\]
+
+\paragraph{Exercise:} Determine the evaluation context for each step of the reduction above.
+
+We use $\leadsto^*$ to denote reflexive and transitive closure of $\leadsto$.
+
+\section{Type safety}
+We say a language is type safe or has the type safety property if:
+\[
+\forall e, \tau.~e : \tau \Rightarrow \forall e'.~ e \leadsto^* e'
+\Rightarrow e' \in \VAL \lor \exists e''.~e\leadsto e''
+\]
+
+For such a simple language as STLC, type safety can be easily proven using the well-known progress and preservation technique. In these notes we ignore this well-known technique for the sake of developing one of the (if not the) simplest use cases of logical relations.
+
+\section{Logical relations}
+
+\end{document}
