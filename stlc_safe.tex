@@ -189,9 +189,9 @@ In the second stage we extend these predicates to all expressions.
 \[
 \begin{array}{lll}
 \semtyp{}{\UNT}(v) &\defeq& v = \TT\\
-\semtyp{}{\tau_1 \times \tau_2} &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
+\semtyp{}{\tau_1 \times \tau_2}(v) &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
 \semtyp{}{\tau_1}(v_1) \land \semtyp{}{\tau_1}(v_2)\\
-\semtyp{}{\tau_1 \to \tau_2} &\defeq& \exists e, v = \lambda x.~e\land
+\semtyp{}{\tau_1 \to \tau_2}(v) &\defeq& \exists e, v = \lambda x.~e\land
 \forall v'.~\semtyp{}{\tau_1}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\tau_2}}(e[v/x])
 \end{array}
 \]
