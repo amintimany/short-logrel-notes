@@ -22,8 +22,9 @@
 \newcommand{\ectx}{\mathbf{K}}
 \newcommand{\defeq}{\overset{\Delta}{=}}
 \newcommand{\semtyp}[2]{\llbracket #2 \rrbracket_{#1}}
+\newcommand{\TVAR}{\mathsf{TVar}}
 
-\title{Logical relations: safety of simply-typed lambda calculus}
+\title{Logical relations: safety of system F}
 \author{Amin Timany}
 \date{\today}
 
@@ -41,8 +42,10 @@ to avoid such problems.
 \begin{array}{llll}
 \textit{variables}(\VAR) & \multicolumn{3}{l}{x, y, z, \dots}\\
 \textit{expressions}(\EXP) & e &::=& x \gor \TT \gor (e, e)
-\gor \fst~e \gor \snd~e \gor \lambda x.~e \gor e~e\\
+\gor \fst~e \gor \snd~e \gor \lambda x.~e \gor e~e
+\gor \Lambda~e \gor e~\bullet\\
 \textit{values}(\VAL) & v &::=& \TT \gor (v, v) \gor \lambda x.~e
+\gor \gor \Lambda~e
 \end{array}
 \]
 The set of values is a subset of the set of expressions: $\VAL \subset \EXP$.
@@ -50,40 +53,47 @@ The set of values is a subset of the set of expressions: $\VAL \subset \EXP$.
 \subsection{Types and typing}
 \[
 \begin{array}{llll}
-\textit{types}(\TYP) & \tau &::=& \UNT \gor \tau \times \tau 
-\gor \tau \to \tau
+\textit{type variables}(\TVAR) & \multicolumn{3}{l}{\alpha, \delta, \zeta, \dots}\\
+\textit{types}(\TYP) & \tau &::=& \alpha \gor \UNT \gor \tau \times\tau
+\gor \tau \to \tau \gor \forall \alpha.~\tau
 \end{array}
 \]
-We consider typing contexts as unordered sequences associating
-variables to types.
+The typing context that we consider is a pair of contexts $\Omega$ the context for type variables and $\Gamma$ the context for term variables.
+The ``compound" typing context (typing context for short) that we use in defining the typing rules is a pair of context written as $\Omega; \Gamma$.
 \[
 \begin{array}{llll}
-\textit{typing context}(\TCTX) & \Gamma &::=& \cdot \gor x : \tau, \Gamma 
+\textit{typing context}(\TCTX) & \Gamma &::=& \cdot \gor x : \tau, \Gamma\\
+\textit{context of typing variables}(\TCTX) & \Omega &::=& \cdot \gor \alpha, \Omega
 \end{array}
 \]
-Typing rules for our simply-typed lambda calculus(STLC) are:
+Typing rules for our system F are:
 \[
-\frac{}{\Gamma \vdash \TT : \UNT}(\textsc{Unit})
+\frac{}{\Omega; \Gamma \vdash \TT : \UNT}(\textsc{Unit})
 \hspace{2em}
-\frac{x : \tau \in \Gamma}{\Gamma \vdash x : \tau}(\textsc{Var})
+\frac{\Omega; x : \tau \in \Gamma}{\Omega; \Gamma \vdash x : \tau}(\textsc{Var})
 \hspace{2em}
-\frac{\Gamma \vdash e_1 : \tau_1 \hspace{1em}
-\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}(\textsc{Prod})
+\frac{\Omega; \Gamma \vdash e_1 : \tau_1 \hspace{1em}
+\Omega; \Gamma \vdash e_2 : \tau_2}{\Omega; \Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}(\textsc{Prod})
 \]
 \[
-\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \fst~e : \tau_1}(\textsc{Fst})
+\frac{\Omega; \Gamma \vdash e : \tau_1 \times \tau_2}{\Omega; \Gamma \vdash \fst~e : \tau_1}(\textsc{Fst})
 \hspace{2em}
-\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \snd~e : \tau_2}(\textsc{Snd})
+\frac{\Omega; \Gamma \vdash e : \tau_1 \times \tau_2}{\Omega; \Gamma \vdash \snd~e : \tau_2}(\textsc{Snd})
 \hspace{2em}
-\frac{x : \tau_1, \Gamma \vdash e : \tau_2}{\Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}(\textsc{Lam})
+\frac{\Omega; x : \tau_1, \Gamma \vdash e : \tau_2}{\Omega; \Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}(\textsc{Lam})
 \]
 \[
 \frac{\Gamma \vdash e : \tau_1 \to \tau_2 \hspace{1em}
 \Gamma \vdash e' : \tau_1}{\Gamma \vdash e~e' : \tau_2}(\textsc{App})
+\hspace{2em}
+\frac{\Omega; \Gamma \vdash e : \tau}{\Omega; \Gamma \vdash \lambda x.~e : \forall \alpha.~\tau}(\textsc{TLam})
+\hspace{2em}
+\frac{\Omega; \Gamma \vdash e : \forall \alpha.~\tau}
+{\Omega; \Gamma \vdash e~\bullet : \tau[\tau'/\alpha]}(\textsc{TApp})\\
 \]
 we write $e : \tau$ as a shorthand for $\cdot \vdash e : \tau$.
 \subsection{Operational semantics (CBV)}
-We describe the small-step call-by-value (CBV) operational semantics for STLC. We do this in two steps. This is more-or-less the standard for describing the semantics of a CBV language.
+We describe the small-step call-by-value (CBV) operational semantics for system F. We do this in two steps. This is more-or-less the standard for describing the semantics of a CBV language.
 In the first step we give the head reduction relation ($\leadsto$).
 In the second step we extend this to non-head reductions using
 evaluation context ($\ECTX$).
@@ -92,7 +102,8 @@ evaluation context ($\ECTX$).
 \[
 \fst~(v_1, v_2) \leadsto v_1 \hspace{2em}
 \snd~(v_1, v_2) \leadsto v_2 \hspace{2em}
-(\lambda x.~e)~v \leadsto e[v/x]
+(\lambda x.~e)~v \leadsto e[v/x] \hspace{2em}
+(\Lambda~e)~\bullet \leadsto e
 \]
 Note that here $v$'s are values \emph{and not any expression}.
 $e[v/x]$ is the expression $e$ where all instances of $x$ are
@@ -109,7 +120,7 @@ and $\ectx[e]$ is the expression where the single whole in the context $\ectx$ (
 \begin{array}{llll}
 \textit{evaluation contexts}(\ECTX) &\ectx &::=& \cdot
 \gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, e) \gor (v, \ectx)
-\gor \ectx~e \gor v~\ectx
+\gor \ectx~e \gor v~\ectx \gor \ectx~\bullet
 \end{array}
 \]
 
@@ -146,7 +157,7 @@ where
 \mathbf{Safe}(e) \defeq \forall e'.~ e \leadsto^* e'
 \Rightarrow e' \in \VAL \lor \exists e''.~e\leadsto e''
 \]
-For such a simple language as STLC, type safety can be easily proven using the well-known progress and preservation technique. In these notes we ignore this well-known technique for the sake of developing one of the (if not the) simplest use cases of logical relations.
+For system F, type safety can be proven using the well-known progress and preservation technique. In these notes we ignore this well-known technique for the sake of developing a simple use cases of logical relations.
 
 \section{Logical relations}
 It seems only natural, given the statement of type safety (with the form $e : \tau$ implying safety), to try proving this statement with induction on the typing derivation.
@@ -180,19 +191,32 @@ are in the predicate if they (vaguely speaking) lambdas that
 when applied to terms that have the desired property, result in
 a term with the desired property. We make this clear below.
 
+\paragraph{Note:} This issue is not observed in the case of
+\textsc{TApp}. In this case, $e~\bullet \leadsto e$ and the safety
+of $e$ is simply the induction hypothesis. 
+
 \subsection{The logical predicates for type safety}
 We define these predicates in two stages. First, we define a
 set of predicates on values defined recursively on types.
 In the second stage we extend these predicates to all expressions.
+Notice that since these predicates are defined by recursion on
+types and types can have free variables, we need to consider
+the interpretation of free type variables.
+We use a partial mapping $\xi$ which maps type variables to
+predicates.
 
-\paragraph{Safety logical predicates on values $\left(\semtyp{}{\tau}\right)$:}
+\paragraph{Safety logical predicates on values $\left(\semtyp{}{\Omega \vdash \tau}\right)$:}
+Let us have a firs na\"ive attempt at defining these logical
+predicates.
 \[
 \begin{array}{lll}
-\semtyp{}{\UNT}(v) &\defeq& v = \TT\\
-\semtyp{}{\tau_1 \times \tau_2} &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
-\semtyp{}{\tau_1}(v_1) \land \semtyp{}{\tau_1}(v_2)\\
-\semtyp{}{\tau_1 \to \tau_2} &\defeq& \exists e, v = \lambda x.~e\land
-\forall v'.~\semtyp{}{\tau_1}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\tau_2}}(e[v/x])
+\semtyp{}{\Omega \vdash \UNT}^{\xi}(v) &\defeq& v = \TT\\
+\semtyp{}{\Omega \vdash \tau_1 \times \tau_2} &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
+\semtyp{}{\Omega \vdash \tau_1}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}(v_2)\\
+\semtyp{}{\Omega \vdash \tau_1 \to \tau_2} &\defeq& \exists e, v = \lambda x.~e\land
+\forall v'.~\semtyp{}{\Omega \vdash \tau_1}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}}(e[v/x])\\
+\semtyp{}{\forall \alpha.~\tau} &\defeq& \exists e, v = \Lambda~e\land
+\forall \tau'. \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}}(e[v/x])
 \end{array}
 \]
 where $\mathbf{Safe}_{P}(e)$ for a predicate $P$ on values is defined as
