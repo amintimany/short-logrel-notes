@@ -2,10 +2,11 @@
 \usepackage{newcent}
 \usepackage{geometry}
 \usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{stmaryrd}
+\usepackage{amsthm}
 
-\title{Logical relations: safety of simply-typed lambda calculus}
-\author{Amin Timany}
-\date{\today}
+\newtheorem{theorem}{Theorem}
 
 \newcommand{\gor}{~|~}
 \newcommand{\fst}{\mathit{fst}}
@@ -19,6 +20,13 @@
 \newcommand{\TCTX}{\mathsf{TCtx}}
 \newcommand{\ECTX}{\mathsf{ECtx}}
 \newcommand{\ectx}{\mathbf{K}}
+\newcommand{\defeq}{\overset{\Delta}{=}}
+\newcommand{\semtyp}[2]{\llbracket #2 \rrbracket_{#1}}
+
+\title{Logical relations: safety of simply-typed lambda calculus}
+\author{Amin Timany}
+\date{\today}
+
 \begin{document}
 \maketitle
 
@@ -55,22 +63,23 @@ variables to types.
 \]
 Typing rules for our simply-typed lambda calculus(STLC) are:
 \[
-\frac{}{\Gamma \vdash \TT : \UNT}
+\frac{}{\Gamma \vdash \TT : \UNT}(\textsc{Unit})
 \hspace{2em}
-\frac{x : \tau \in \Gamma}{\Gamma \vdash x : \tau}
-\hspace{2em}
-\frac{\Gamma \vdash e_1 : \tau_1 \hspace{1em}
-\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}
+\frac{x : \tau \in \Gamma}{\Gamma \vdash x : \tau}(\textsc{Var})
 \hspace{2em}
 \frac{\Gamma \vdash e_1 : \tau_1 \hspace{1em}
-\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}
+\Gamma \vdash e_2 : \tau_2}{\Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}(\textsc{Prod})
 \]
 \[
-\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \fst~e : \tau_1}
+\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \fst~e : \tau_1}(\textsc{Fst})
 \hspace{2em}
-\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \snd~e : \tau_2}
+\frac{\Gamma \vdash e : \tau_1 \times \tau_2}{\Gamma \vdash \snd~e : \tau_2}(\textsc{Snd})
 \hspace{2em}
-\frac{x : \tau_1, \Gamma \vdash e : \tau_2}{\Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}
+\frac{x : \tau_1, \Gamma \vdash e : \tau_2}{\Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}(\textsc{Lam})
+\]
+\[
+\frac{\Gamma \vdash e : \tau_1 \to \tau_2 \hspace{1em}
+\Gamma \vdash e' : \tau_1}{\Gamma \vdash e~e' : \tau_2}(\textsc{App})
 \]
 we write $e : \tau$ as a shorthand for $\cdot \vdash e : \tau$.
 \subsection{Operational semantics (CBV)}
@@ -98,11 +107,15 @@ and $\ectx[e]$ is the expression where the single whole in the context $\ectx$ (
 \paragraph{Evaluation Contexts:}
 \[
 \begin{array}{llll}
-\textit{evaluation contexts}(\ECTX) &\ectx &::=& [\cdot]
+\textit{evaluation contexts}(\ECTX) &\ectx &::=& \cdot
 \gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, e) \gor (v, \ectx)
 \gor \ectx~e \gor v~\ectx
 \end{array}
 \]
+
+\paragraph{Remark:} In the sequel, we will use the word ``context"
+to refer to both typing contexts and evaluation contexts whenever
+the distinction is clear from the discussion at hand.
 
 \paragraph{Example:} The following is the only possible reduction
 for the expression:
@@ -126,12 +139,174 @@ We use $\leadsto^*$ to denote reflexive and transitive closure of $\leadsto$.
 \section{Type safety}
 We say a language is type safe or has the type safety property if:
 \[
-\forall e, \tau.~e : \tau \Rightarrow \forall e'.~ e \leadsto^* e'
+\forall e, \tau.~e : \tau \Rightarrow \mathbf{Safe}(e)
+\]
+where
+\[
+\mathbf{Safe}(e) \defeq \forall e'.~ e \leadsto^* e'
 \Rightarrow e' \in \VAL \lor \exists e''.~e\leadsto e''
 \]
-
 For such a simple language as STLC, type safety can be easily proven using the well-known progress and preservation technique. In these notes we ignore this well-known technique for the sake of developing one of the (if not the) simplest use cases of logical relations.
 
 \section{Logical relations}
+It seems only natural, given the statement of type safety (with the form $e : \tau$ implying safety), to try proving this statement with induction on the typing derivation.
+As we will see below, applying induction directly on the statement of type safety does not allow us to prove it.
+
+What we do in this section is attempting to apply induction to type safety and each time this fails we change the statement of the theorem that we prove so that induction is applicable. In each step, we show that the statement that we consider implies type safety and hence proving the theorem considered gives us the desired result.
+
+\paragraph{Attempt 1:}
+If we simply apply induction on the the typing derivation to prove
+type safety as stated above, we immediately run into a problem
+in the case \textsc{App}. In this case we have to prove $\mathbf{Safe}(e~e')$ and the only thing that we know is that $\mathbf{Safe}(e)$ and $\mathbf{Safe}(e')$.
+Particularly, notice the case where $e = \lambda x.~e''$.
+Since $e$ is already a value, its safety, says absolutely nothing about $e''$.
+Note that in this case, we can have $e' \leadsto^* v'$ and
+$(\lambda x.~e'')~v' \leadsto^* e''[v'/x]$.
+In this case, we do not have enough information to show that
+\[
+e''[v'/x] \in \VAL \lor \exists e_2.~e''[v'/x] \leadsto e_2
+\]
+This is the key observation motivating logical relations.
+The essence of lambdas is that when applied, we substitute the
+term they are applied to with the lambda variable.
+The intuition being, lambdas are functions and when applied
+(just as is the case in ordinary mathematical functions) we substitute the term they are applied to for the function argument.
+
+The main idea of logical relations is simply just that.
+In fact, we could summarize the technique of logical relations into
+the slogan: \emph{Lambdas are functions}.
+In this regard, we define a relation (in this case a unary relation, i.e., a predicate) defined inductively on the types of the programming language. This predicate, in the case of function types (whose values are lambdas) specifically says that terms
+are in the predicate if they (vaguely speaking) lambdas that
+when applied to terms that have the desired property, result in
+a term with the desired property. We make this clear below.
+
+\subsection{The logical predicates for type safety}
+We define these predicates in two stages. First, we define a
+set of predicates on values defined recursively on types.
+In the second stage we extend these predicates to all expressions.
+
+\paragraph{Safety logical predicates on values $\left(\semtyp{}{\tau}\right)$:}
+\[
+\begin{array}{lll}
+\semtyp{}{\UNT}(v) &\defeq& v = \TT\\
+\semtyp{}{\tau_1 \times \tau_2} &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
+\semtyp{}{\tau_1}(v_1) \land \semtyp{}{\tau_1}(v_2)\\
+\semtyp{}{\tau_1 \to \tau_2} &\defeq& \exists e, v = \lambda x.~e\land
+\forall v'.~\semtyp{}{\tau_1}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\tau_1}}(e[v/x])
+\end{array}
+\]
+where $\mathbf{Safe}_{P}(e)$ for a predicate $P$ on values is defined as
+\[
+\mathbf{Safe}_{P}(e) \defeq \forall e'.~ e \leadsto^* (e'
+\Rightarrow e' \in \VAL \land P(e')) \lor \exists e''.~e\leadsto e''
+\]
+\paragraph{Safety logical predicates on expressions $\left(\semtyp{\EXP}{\tau}\right)$:}
+\[
+\semtyp{\EXP}{\tau} \defeq \mathbf{Safe}_{\semtyp{}{\tau}}(e)
+\]
+
+\paragraph{Note:} It is obvious that $\semtyp{\EXP}{\tau}$
+defined above implies $\mathbf{Safe}(e)$.
+
+\paragraph{Attempt 2:} Let us have another attempt at proving this property by proving
+the statement below which implies type safety.
+
+\begin{align*}
+\label{secatt}
+\forall e, \tau.~e : \tau \Rightarrow \semtyp{\EXP}{\tau}(e)
+\end{align*}
+
+\paragraph{Case \textsc{App}:}
+Let us consider the case of \textsc{App} which was problematic before.
+We need to show that $\semtyp{\EXP}{\tau_2}(e~e')$ knowing that
+$\semtyp{\EXP}{\tau_1 \to \tau_2}(e)$ and $\semtyp{\EXP}{\tau_1}(e')$.
+We know that either \textbf{(case 1)} $e~e' \leadsto^* e''~e'$ if $e \leadsto^* e''$
+or \textbf{(case 2)} to $e~e' \leadsto^* e~e''$ if $e$ is already a value and $e' \leadsto^* e''$.
+
+Let us consider \textbf{(case 1)}.
+In \textbf{(case 1)}, safety of $e$ implies that $e''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $e_2$ such that $e'' \leadsto e_2$. In \textbf{(case 1.2)}, we have $e''~e' \leadsto e_2~e'$ which proves
+the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\EXP}{\tau_2}}(e~e')$.
+
+Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $e$ is
+a value and therefore we have $\semtyp{\EXP}{\tau_1 \to \tau_2}(e)$ and thus $e = \lambda x.~e_1$.
+In this case, $e~e' \leadsto^* e~e''$ if $e \leadsto^* e''$. Safety of $e'$ now implies that
+either $e''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $e_2$ such that
+$e'' \leadsto e_2$.
+In \textbf{(case 2.1)} we need to show that $\semtyp{\EXP}{\tau_1 \to \tau_2}((\lambda x.~e_1)~e'')$ where $e''$ is a value. This simply follows from the fact that $(\lambda x.~e_1)~e'' \leadsto e_1[e''/x]$ and the definition of $\semtyp{\EXP}{\tau_1 \to \tau_2}$.
+In \textbf{(case 2.2)}, we have $e'' \leadsto e_2$ and therefore $e~e'' \leadsto e~e_2$ which
+proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{\EXP}{\tau_2}}(e~e')$.
+
+\paragraph{Case \textsc{Lam}:}
+In proving the case \textsc{lam} we immediately hit a problem. There is no induction hypothesis.
+Notice that the induction is on $e : \tau$ which is a shorthand for $\cdot \vdash e : \tau$.
+Now $e = \lambda x.~e_1$ and $\tau = \tau_1 \to \tau_2$. The premise, therefore, is $x : \tau_1 \vdash e : \tau_2$. This differs from the statement of the induction.
+In other words, we have not accounted for variables in the context (free variables) as our original statement was over closed terms.
+
+Therefore, we have to strengthen the statement that we have to prove once more.
+We proceed by defining sequences of terms in the predicate. Then, we say that any term that
+is well-typed under a context, if its free variables are filled with terms in the respective
+predicates, the resulting term is in the predicate.
+
+\paragraph{Sequences of terms in the predicate}
+A sequence of terms $\mathit{vs} = v_1, \dots,v_n$ is said to be in the predicates for a context
+$\Gamma = x_1 : \tau_1,\dots, x_n : \tau_n$, written as $\semtyp{}{\Gamma}(vs)$ if
+\[
+\begin{array}{lll}
+\semtyp{}{\cdot}(\mathit{vs}) &\defeq& |\mathit{vs}| = 0\\
+\semtyp{}{x : \tau, \Gamma}(\mathit{vs}) &\defeq& vs = v_1, \mathit{vs'} \land \semtyp{}{\tau}(v_1) \land
+\semtyp{}{\Gamma}(\mathit{vs'})
+\end{array}
+\]
+
+\paragraph{Attempt 3}
+In this final attempt we prove the following theorem, known as the fundamental theorem (or fundamental lemma) of logical relations.
+
+\begin{theorem}[Fundamental theorem of logical relations]
+For any $e$, $\Gamma$ and $\tau$ such that $\Gamma \vdash e : \tau$ we have:
+\[
+\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\tau}(e[\mathit{vs}/\mathit{xs}])
+\]
+where $\mathit{xs}$ is the sequence of variables of $\Gamma$ and
+$e[v_1, \dots, v_n/x_1, \dots, x_n]$ is the term $e$ where $v_i$'s are substituted with $x_i$s simultaneously
+\end{theorem}
+
+\begin{proof}
+By induction on the derivation of $\Gamma \vdash e : \tau$.
+The case of \textsc{App} is very similar to its proof in the previous attempt.
+The only thing to note is that $(e~e')[\mathit{vs}/\mathit{xs}] = e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}]$.
+
+Let us consider the case \textsc{Lam}. In this case, we have to show that
+\[
+\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\tau_1 \to \tau_2}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\]
+Since $(\lambda x.~e)$ is already a value, we have to show that:
+\[
+\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_1 \to \tau_2}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\]
+and equivalently
+\[
+\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_1 \to \tau_2}(\lambda x.~e[\mathit{vs}/\mathit{xs}])
+\]
+which is equivalent to 
+\[
+\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
+\forall v.~\semtyp{}{\tau_1}(v) \Rightarrow \semtyp{}{\tau_2}(e[\mathit{vs}/\mathit{xs}])[x/v]
+\]
+and by induction hypothesis we have
+\[
+\forall \mathit{vs}. ~\semtyp{}{x : \tau, \Gamma}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_2}(e[\mathit{vs}/\mathit{xs}])
+\]
+It is simple to see that $(e[\mathit{vs}/\mathit{xs}])[x/v] = e[v, \mathit{vs}/x, \mathit{xs}]$
+which concludes the case \textsc{Lam}.
+
+We leave the rest of the cases as an easy exercise.
+\end{proof}
+
+
 
 \end{document}
