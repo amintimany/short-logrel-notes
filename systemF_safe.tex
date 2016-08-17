@@ -490,6 +490,101 @@ Which (unfolding the definition) means we have to show that
 Which follows from the induction hypothesis.
 \end{proof}
 
+\section{Parametericity and theorems for free}
+The theorem that we proved above (the fundamental theorem)
+has a number of interesting consequences.
+It in particular it says that types that we quantify over in our
+language are not just the types that are syntactically
+representable in the language but are in general any set of
+values.
 
+One in particular can use this theorem to derive theorems about
+polymorphic programs.
+These theorems are sometimes referred to as free theorems. This is due to the fact that they follow rather easily from the
+fundamental theorem.
+Two such theorems that we proven below.
+
+\begin{theorem}
+Any term of type $\forall \alpha.~\alpha \to \alpha$ is the identity function.
+\[
+\forall e, e : \forall \alpha.~\alpha \to \alpha \Rightarrow
+\forall v \in \VAL.~((e~\bullet)~v) \leadsto^* e' \Rightarrow
+e' \in \VAL \land e' = v \lor \exists e''.~e' \leadsto e''
+\]
+\end{theorem}
+
+\begin{proof}
+By the fundamental theorem above we know that
+\begin{align}
+\forall \xi.~ \semtyp{\EXP}{\cdot \vdash \forall \alpha.~\alpha \to \alpha}^{\xi}(e)
+\label{TrueSemTyp}
+\end{align}
+On the other hand, if we have $((e~\bullet)~v) \leadsto^* e'$ we must have
+that $e' = ((f~\bullet)~v)$ for some $f$ or $e = \Lambda~g$ is a value and
+we have that $(g~v) \leadsto^* e'$.
+In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists f'.~f \leadsto f'$ but in that
+case (from Formula~\ref{TrueSemTyp} above) we know that
+$e' \leadsto ((f'~\bullet)~v)$.
+
+In the latter case above (where $e$ is a value), we knwo
+(from Formula~\ref{TrueSemTyp} above) that
+\[
+\exists g.~e = \Lambda~g \land
+\forall P\in 2^{\VAL}.~\semtyp{\EXP}{\alpha \vdash \alpha \to \alpha}^{[\alpha \mapsto P]}(g)
+\]
+In this case, we can take $P = \{v\}$. This means
+\[
+\semtyp{\EXP}{\alpha \vdash \alpha \to \alpha}^{[\alpha \mapsto \{v\}]}(g)
+\]
+Let us assume without loss of generality (we have assumed a similar other case) that $g$ is a value in which case we have
+\[
+\exists h.~ g = \lambda x.~h \land \forall w.~ w \in \{v\}
+\Rightarrow \mathbf{Safe}_{\{v\}}(h[w/x])
+\]
+Therefore
+\[
+(g~v) \equiv ((\lambda x.~h)~v) \leadsto^* e' \Rightarrow
+(h[v/x]) \leadsto e' \Rightarrow
+e' \in \VAL \land e' \in \{v\} \lor \exists e''.~e' \leadsto e''
+\]
+\end{proof}
+
+\begin{theorem}
+Any term of type $\forall \alpha.~\alpha$ is divergent.
+\[
+\forall e, e : \forall \alpha.~\alpha \Rightarrow
+(e~\bullet) \leadsto^* e' \Rightarrow \exists e''.~e' \leadsto e''
+\]
+\end{theorem}
+
+\begin{proof}
+By the fundamental theorem above we know that
+\begin{align}
+\forall \xi.~ \semtyp{\EXP}{\cdot \vdash \forall \alpha.~\alpha}^{\xi}(e)
+\label{FalseSemTyp}
+\end{align}
+On the other hand, if we have $(e~\bullet) \leadsto^* e'$ we must have
+that $e' = (f~\bullet)$ for some $f$ or $e = \Lambda~g$ is a value and
+we have that $g \leadsto^* e'$.
+In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists f'.~f \leadsto f'$ but in that
+case (from Formula~\ref{FalseSemTyp} above) we know that
+$e' \leadsto (f'~\bullet)$.
+
+In the latter case above (where $e$ is a value), we knwo
+(from Formula~\ref{FalseSemTyp} above) that
+\[
+\exists g.~e = \Lambda~g \land
+\forall P\in 2^{\VAL}.~\semtyp{\EXP}{\alpha \vdash \alpha}^{[\alpha \mapsto P]}(g)
+\]
+In this case, we can take $P = \emptyset$. This means
+\[
+\semtyp{\EXP}{\alpha \vdash \alpha}^{[\alpha \mapsto \emptyset]}(g)
+\]
+By definition this is equivalent to
+\[
+\mathbf{Safe}_{\emptyset}(g)
+\]
+Which is precisely what we wanted to prove.
+\end{proof}
 
 \end{document}
