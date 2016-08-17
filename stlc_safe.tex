@@ -234,7 +234,7 @@ either $e''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $e
 $e'' \leadsto e_2$.
 In \textbf{(case 2.1)} we need to show that $\semtyp{\EXP}{\tau_1 \to \tau_2}((\lambda x.~e_1)~e'')$ where $e''$ is a value. This simply follows from the fact that $(\lambda x.~e_1)~e'' \leadsto e_1[e''/x]$ and the definition of $\semtyp{\EXP}{\tau_1 \to \tau_2}$.
 In \textbf{(case 2.2)}, we have $e'' \leadsto e_2$ and therefore $e~e'' \leadsto e~e_2$ which
-proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{\EXP}{\tau_2}}(e~e')$.
+proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{}{\tau_2}}(e~e')$.
 
 \paragraph{Case \textsc{Lam}:}
 In proving the case \textsc{lam} we immediately hit a problem. There is no induction hypothesis.

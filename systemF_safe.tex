@@ -92,7 +92,7 @@ Typing rules for our system F are:
 \frac{\Omega; \Gamma \vdash e : \forall \alpha.~\tau}
 {\Omega; \Gamma \vdash e~\bullet : \tau[\tau'/\alpha]}(\textsc{TApp})\\
 \]
-we write $e : \tau$ as a shorthand for $\cdot \vdash e : \tau$.
+we write $e : \tau$ as a shorthand for $\cdot; \cdot \vdash e : \tau$.
 \subsection{Operational semantics (CBV)}
 We describe the small-step call-by-value (CBV) operational semantics for system F. We do this in two steps. This is more-or-less the standard for describing the semantics of a CBV language.
 In the first step we give the head reduction relation ($\leadsto$).
@@ -280,7 +280,7 @@ The new logical predicates for system F is as follows:
 \semtyp{}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(v) &\defeq& \exists e, v = \lambda x.~e\land
 \forall v'.~\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(e[v/x])\\
 \semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(v) &\defeq& \exists e, v = \Lambda~e\land
-\forall P \subseteq 2^{\VAL}.~\mathbf{Safe}_{\semtyp{}{\alpha, \Omega \vdash \tau}^{[\alpha \mapsto P]\xi}}(e)
+\forall P \in 2^{\VAL}.~\mathbf{Safe}_{\semtyp{}{\alpha, \Omega \vdash \tau}^{[\alpha \mapsto P]\xi}}(e)
 \end{array}
 \]
 
@@ -291,104 +291,203 @@ The new logical predicates for system F is as follows:
 
 \paragraph{Note:} It is obvious that $\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}$
 defined above implies $\mathbf{Safe}(e)$.
+\paragraph{Note:} Also note that we are implicitly assuming that the domain of
+the partial mapping $\xi$ in $\semtyp{}{\Omega \vdash \tau}^{\xi}$ is always $\Omega$.
 
-\paragraph{Attempt 2:} Let us have another attempt at proving this property by proving
-the statement below which implies type safety.
-
-\begin{align*}
-\label{secatt}
-\forall e, \tau.~e : \tau \Rightarrow \semtyp{\EXP}{\tau}(e)
-\end{align*}
-
-\paragraph{Case \textsc{App}:}
-Let us consider the case of \textsc{App} which was problematic before.
-We need to show that $\semtyp{\EXP}{\tau_2}(e~e')$ knowing that
-$\semtyp{\EXP}{\tau_1 \to \tau_2}(e)$ and $\semtyp{\EXP}{\tau_1}(e')$.
-We know that either \textbf{(case 1)} $e~e' \leadsto^* e''~e'$ if $e \leadsto^* e''$
-or \textbf{(case 2)} to $e~e' \leadsto^* e~e''$ if $e$ is already a value and $e' \leadsto^* e''$.
-
-Let us consider \textbf{(case 1)}.
-In \textbf{(case 1)}, safety of $e$ implies that $e''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $e_2$ such that $e'' \leadsto e_2$. In \textbf{(case 1.2)}, we have $e''~e' \leadsto e_2~e'$ which proves
-the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\EXP}{\tau_2}}(e~e')$.
-
-Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $e$ is
-a value and therefore we have $\semtyp{\EXP}{\tau_1 \to \tau_2}(e)$ and thus $e = \lambda x.~e_1$.
-In this case, $e~e' \leadsto^* e~e''$ if $e \leadsto^* e''$. Safety of $e'$ now implies that
-either $e''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $e_2$ such that
-$e'' \leadsto e_2$.
-In \textbf{(case 2.1)} we need to show that $\semtyp{\EXP}{\tau_1 \to \tau_2}((\lambda x.~e_1)~e'')$ where $e''$ is a value. This simply follows from the fact that $(\lambda x.~e_1)~e'' \leadsto e_1[e''/x]$ and the definition of $\semtyp{\EXP}{\tau_1 \to \tau_2}$.
-In \textbf{(case 2.2)}, we have $e'' \leadsto e_2$ and therefore $e~e'' \leadsto e~e_2$ which
-proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{\EXP}{\tau_2}}(e~e')$.
-
-\paragraph{Case \textsc{Lam}:}
-In proving the case \textsc{lam} we immediately hit a problem. There is no induction hypothesis.
-Notice that the induction is on $e : \tau$ which is a shorthand for $\cdot \vdash e : \tau$.
-Now $e = \lambda x.~e_1$ and $\tau = \tau_1 \to \tau_2$. The premise, therefore, is $x : \tau_1 \vdash e : \tau_2$. This differs from the statement of the induction.
-In other words, we have not accounted for variables in the context (free variables) as our original statement was over closed terms.
-
-Therefore, we have to strengthen the statement that we have to prove once more.
-We proceed by defining sequences of terms in the predicate. Then, we say that any term that
-is well-typed under a context, if its free variables are filled with terms in the respective
-predicates, the resulting term is in the predicate.
+Here we accounted for free type variables (variables appearing
+in $\Omega$) by adding a partial
+mapping $\xi$ from type variables to predicates on values.
+Similarly, we have to account for free term variables (variables
+appearing in $\Gamma$)\footnote{For more details on this
+issue look at my notes on logical relations for safety of
+simply-typed lambda calculus.}.
+We do this by defining sequences of terms $\mathit{vs}$
+that are in the corresponding predicates in the context
+$\Gamma$, written as $\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs})$.
 
 \paragraph{Sequences of terms in the predicate}
 A sequence of terms $\mathit{vs} = v_1, \dots,v_n$ is said to be in the predicates for a context
-$\Gamma = x_1 : \tau_1,\dots, x_n : \tau_n$, written as $\semtyp{}{\Gamma}(vs)$ if
+$\Gamma = x_1 : \tau_1,\dots, x_n : \tau_n$ under the type
+context $\Omega$ (with interpretation $\xi$), written as $\semtyp{}{\Omega \vdash \Gamma}^{\xi}(vs)$ if
 \[
 \begin{array}{lll}
-\semtyp{}{\cdot}(\mathit{vs}) &\defeq& |\mathit{vs}| = 0\\
-\semtyp{}{x : \tau, \Gamma}(\mathit{vs}) &\defeq& vs = v_1, \mathit{vs'} \land \semtyp{}{\tau}(v_1) \land
-\semtyp{}{\Gamma}(\mathit{vs'})
+\semtyp{}{\Omega \vdash \cdot}^{\xi}(\mathit{vs}) &\defeq&
+|\mathit{vs}| = 0\\
+\semtyp{}{\Omega \vdash x : \tau, \Gamma}^{\xi}(\mathit{vs})
+&\defeq& vs = v_1, \mathit{vs'} \land
+\semtyp{}{\Omega \vdash \tau}^{\xi}(v_1) \land
+\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs'})
 \end{array}
 \]
 
-\paragraph{Attempt 3}
-In this final attempt we prove the following theorem, known as the fundamental theorem (or fundamental lemma) of logical relations.
+\paragraph{Attempt 2:} In this final attempt we prove the following theorem, known as the fundamental theorem (or fundamental lemma) of logical relations.
 
 \begin{theorem}[Fundamental theorem of logical relations]
-For any $e$, $\Gamma$ and $\tau$ such that $\Gamma \vdash e : \tau$ we have:
+For any $e$, $\Omega$, $\Gamma$ and $\tau$ such that $\Omega; \Gamma \vdash e : \tau$ we have:
 \[
-\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\tau}(e[\mathit{vs}/\mathit{xs}])
+\forall \xi, \mathit{vs}. ~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
 \]
 where $\mathit{xs}$ is the sequence of variables of $\Gamma$ and
-$e[v_1, \dots, v_n/x_1, \dots, x_n]$ is the term $e$ where $v_i$'s are substituted with $x_i$s simultaneously
+$e[v_1, \dots, v_n/x_1, \dots, x_n]$ is the term $e$ where $v_i$'s are substituted with $x_i$'s simultaneously.
 \end{theorem}
 
 \begin{proof}
-By induction on the derivation of $\Gamma \vdash e : \tau$.
+By induction on the derivation of $\Omega \vdash \Gamma \vdash e : \tau$.
+Here we prove the cases \textsc{App}, \textsc{TApp},
+\textsc{Lam} and \textsc{TLam}.
+We leave the rest of the cases as an easy exercise.
 The case of \textsc{App} is very similar to its proof in the previous attempt.
-The only thing to note is that $(e~e')[\mathit{vs}/\mathit{xs}] = e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}]$.
 
-Let us consider the case \textsc{Lam}. In this case, we have to show that
+\paragraph{Case \textsc{App}:}
+Let us consider the case of \textsc{App} which was problematic before.
+We need to show that
+\footnote{Note that
+$(e~e')[\mathit{vs}/\mathit{xs}] = e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}]$.}
 \[
-\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\tau_1 \to \tau_2}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\Omega \vdash \tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}])
 \]
-Since $(\lambda x.~e)$ is already a value, we have to show that:
+knowing that
 \[
-\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_1 \to \tau_2}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\hspace{0.5em}\text{ and }\hspace{0.5em}
+\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\Omega \vdash \tau_1
+}(e'[\mathit{vs}/\mathit{xs}])
+\]
+
+For the rest of this case, we assume some arbitrary but fixed $\xi$ and $\mathit{vs}$.
+We, in addition, write $f$ for $e[\mathit{vs}/\mathit{xs}]$
+and $f'$ for $e'[\mathit{vs}/\mathit{xs}]$.
+
+We know that either \textbf{(case 1)} $f~f' \leadsto^* f''~f'$ if $f \leadsto^* f''$
+or \textbf{(case 2)} to $f~f' \leadsto^* f~f''$ if $e$ is already a value and $f' \leadsto^* f''$.
+
+Let us consider \textbf{(case 1)}.
+In \textbf{(case 1)}, safety of $f$ implies that $f''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $f_2$ such that $f'' \leadsto f_2$. In \textbf{(case 1.2)}, we have $f''~f' \leadsto f_2~f'$ which proves
+the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\EXP}{\Omega \vdash \tau_2}^{\xi}}(f~f')$.
+
+Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $f$ is
+a value and therefore we have $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(f)$ and thus $f = \lambda x.~f_1$.
+In this case, $f~f' \leadsto^* f~f''$ if $f \leadsto^* f''$. Safety of $f'$ now implies that
+either $f''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $f_2$ such that
+$f'' \leadsto f_2$.
+In \textbf{(case 2.1)} we need to show that $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}((\lambda x.~f_1)~f'')$ where $f''$ is a value. This simply follows from the fact that $(\lambda x.~f_1)~f'' \leadsto f_1[f''/x]$ and the definition of $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}$.
+In \textbf{(case 2.2)}, we have $f'' \leadsto f_2$ and therefore $f~f'' \leadsto f~f_2$ which
+proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(f~f')$.
+
+\paragraph{Case \textsc{TApp}:}
+For \textsc{TApp}, we know that
+\[
+\forall \xi, \mathit{vs}.~\semtyp{\EXP}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\]
+and we have to show that
+\[
+\forall \xi, \mathit{vs}, \tau'.~\semtyp{\EXP}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}((e~\bullet)[\mathit{vs}/\mathit{xs}])
+\]
+which is equivalent to
+\[
+\forall \xi, \mathit{vs}, \tau'.~\semtyp{\EXP}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}(e[\mathit{vs}/\mathit{xs}]~\bullet)
+\]
+In the rest of this case, we assume that we have arbitrary
+but fixed $\xi$, $\mathit{vs}$ and $\tau'$.
+
+Here we know that if $e[\mathit{vs}/\mathit{xs}]~\bullet \leadsto^* f$
+for some $f$, then either $f = e'~\bullet$ in which case, we must 
+have that $e[\mathit{vs}/\mathit{xs}] \leadsto^* e'$ and then
+either $e'$ is a value or it reduces in one more step
+(we know this from $\semtyp{\EXP}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])$).
+Or, $e'$ is a value. This latter case is similar to the case where $e[\mathit{vs}/\mathit{xs}]$ is a value in the first place.
+We prove this case below:
+
+In this case, we know that
+\[
+\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
 \]
 and equivalently
 \[
-\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_1 \to \tau_2}(\lambda x.~e[\mathit{vs}/\mathit{xs}])
+\exists f.~e[\mathit{vs}/\mathit{xs}] = \Lambda~f \land
+\forall P \in 2^{\VAL}.~\mathbf{Safe}{\semtyp{}{\alpha, \Omega \vdash \tau}
+^{[P/\alpha]\xi}}(f)
+\]
+Thus, for any term $e'$ such that
+$e[\mathit{vs}/\mathit{xs}]~\bullet \leadsto e'$, we must have
+$f \leadsto e'$.
+Now we must show that
+\[
+(e' \in \VAL \land 
+\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}(e'))
+\lor
+\exists e''.~e' \leadsto e''
+\]
+Notice that this is trivially follows from
+\[
+\mathbf{Safe}{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}
+^{\xi}}(f)
+\equiv
+\mathbf{Safe}{\semtyp{}{\alpha, \Omega \vdash \tau}
+^{[\alpha \mapsto \semtyp{}{\Omega \vdash \tau'}^{\xi}]\xi}}(f)
+\]
+
+\paragraph{Case \textsc{Lam}:}
+Let us consider the case \textsc{Lam}. In this case, we have to show that
+\[
+\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{\EXP}{\tau_1 \to \tau_2}^{\xi}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\]
+Since $(\lambda x.~e)$ is already a value, we have to show that:
+\[
+\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_1 \to \tau_2}^{\xi}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\]
+and equivalently
+\[
+\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_1 \to \tau_2}^{\xi}(\lambda x.~e[\mathit{vs}/\mathit{xs}])
 \]
 which is equivalent to 
 \[
-\forall \mathit{vs}. ~\semtyp{}{\Gamma}(\mathit{vs}) \Rightarrow
-\forall v.~\semtyp{}{\tau_1}(v) \Rightarrow \semtyp{}{\tau_2}(e[\mathit{vs}/\mathit{xs}])[x/v]
+\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\forall v.~\semtyp{}{\tau_1}^{\xi}(v) \Rightarrow \semtyp{}{\tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])[x/v]
 \]
 and by induction hypothesis we have
 \[
-\forall \mathit{vs}. ~\semtyp{}{x : \tau, \Gamma}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_2}(e[\mathit{vs}/\mathit{xs}])
+\forall \xi, \mathit{vs}. ~\semtyp{}{x : \tau, \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
+\semtyp{}{\tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])
 \]
 It is simple to see that $(e[\mathit{vs}/\mathit{xs}])[x/v] = e[v, \mathit{vs}/x, \mathit{xs}]$
 which concludes the case \textsc{Lam}.
 
-We leave the rest of the cases as an easy exercise.
+\paragraph{Case \textsc{TLam}:}
+In this case we know that (from induction hypothesis)
+\[
+\forall \xi, \mathit{vs}.~\semtyp{}{\alpha, \Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow \semtyp{\EXP}
+{\alpha, \Omega \vdash \tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\]
+and we have to show that
+\[
+\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow \semtyp{\EXP}
+{\Omega \vdash \forall \alpha.~\tau}^{\xi}(\Lambda~e[\mathit{vs}/\mathit{xs}])
+\]
+
+For the rest of this case, we assume an arbitrary $\xi$ (with the domain for $\Omega$) and
+some arbitrary but fixed $\mathit{vs}$ for which we know
+$\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs})$.
+
+Notice that $\Lambda~e[\mathit{vs}/\mathit{xs}]$ is a value,
+thus, we have to show that
+\[
+\semtyp{} {\Omega \vdash \forall \alpha.~\tau}^{\xi}(\Lambda~e[\mathit{vs}/\mathit{xs}])
+\]
+Which (unfolding the definition) means we have to show that
+\[
+\forall P \in 2^{\VAL}~\semtyp{\EXP}
+{\alpha, \Omega \vdash \tau}
+^{[\alpha \mapsto  \semtyp{} {\Omega \vdash \tau'}^{\xi}]\xi}(e[\mathit{vs}/\mathit{xs}])
+\]
+Which follows from the induction hypothesis.
 \end{proof}
 
 
