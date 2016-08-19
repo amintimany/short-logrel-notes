@@ -228,22 +228,8 @@ where $[\alpha \mapsto P]\xi$ is extending the partial mapping $\xi$ by addition
 \]
 
 The problem with the case $\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}$ is that this case is not \emph{exactly recursive}.
-In other words, $\tau'$ is not a (inductively-defined)
-constituent of $\forall \alpha.~\tau$.
-Notice that it is provable (and we will indeed use this fact later)
-that
-\[
-\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}
-\equiv
-\semtyp{}{\alpha, \Omega \vdash \forall \alpha.~\tau}^
-{[\alpha \mapsto \semtyp{}{\Omega \vdash \tau'.~\tau}^{\xi}]\xi}
-\]
-and it might seem that if we replace the left hand side with
-the right hand side, in the definition above, the problem is solved.
-However, the problem is deeper than a syntactical problem with
-the predicate not being syntactically recursively defined.
-In fact, there is nothing in this definition restricting the choice of
-$\tau'$. We can for example take $\tau'$ to be $\forall \alpha.~\tau$. This unrestricted choice of $\tau'$ is the essence of the problem.
+In other words, $\tau'$ is not a constituent of $\forall \alpha.~\tau$.
+We can for example take $\tau'$ to be $\forall \alpha.~\tau$. This unrestricted choice of $\tau'$ is the essence of the problem.
 
 There are two ways that we can address this issue.
 A syntactical approach and a rather meta theoretical observation.
@@ -265,7 +251,8 @@ We can however, treat polymorphic types in an
 \emph{impredicative} way, i.e., not restrict what can be
 substituted for in a polymorphic type ($\tau'$ above).
 This is based on a (as alluded to earlier) meta theoretical
-observation (akin to the fact lambdas are functions above).
+observation (akin to the fact lambdas are functions above) by J. Y. Girard
+and J. C. Reynolds.
 This meta level observation is that polymorphic types are
 not quantifying over all of the types of the language but rather
 they are quantifying over all possible types (including those that possibly have no syntactical counterpart in our language).
@@ -333,7 +320,7 @@ $e[v_1, \dots, v_n/x_1, \dots, x_n]$ is the term $e$ where $v_i$'s are substitut
 \end{theorem}
 
 \begin{proof}
-By induction on the derivation of $\Omega \vdash \Gamma \vdash e : \tau$.
+By induction on the derivation of $\Omega ; \Gamma \vdash e : \tau$.
 Here we prove the cases \textsc{App}, \textsc{TApp},
 \textsc{Lam} and \textsc{TLam}.
 We leave the rest of the cases as an easy exercise.
