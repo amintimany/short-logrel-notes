@@ -6,8 +6,15 @@
 \usepackage{stmaryrd}
 \usepackage{amsthm}
 \usepackage[dvinames]{xcolor}
+\usepackage{mathpartir}
+\usepackage{pftools}
+\usepackage[colorlinks]{hyperref}
+\usepackage{microtype}
 
 \newtheorem{theorem}{Theorem}
+
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\eg}{\textit{e.g.}}
 
 \newcommand{\gor}{~|~}
 \newcommand{\fst}{\mathit{fst}}
@@ -22,457 +29,438 @@
 \newcommand{\ECTX}{\mathsf{ECtx}}
 \newcommand{\ectx}{\mathbf{K}}
 \newcommand{\defeq}{\overset{\Delta}{=}}
-\newcommand{\semtyp}[2]{\llbracket #2 \rrbracket_{#1}}
+\newcommand{\pred}{P}
+\newcommand{\semtyp}[3]{\left\llbracket #2 \vdash #3 \right\rrbracket_{#1}}
+\newcommand{\semErel}[1]{#1^{\textbf{E}}}
+\newcommand{\semenv}{\xi}
 \newcommand{\TVAR}{\mathsf{TVar}}
+\newcommand{\TArg}{\_}
+\newcommand{\TLam}{\Lambda}
+\newcommand{\Tctx}{\Gamma}
+\newcommand{\CtxTps}{\Delta}
+\newcommand{\expr}{e}
+\newcommand{\exprB}{f}
+\newcommand{\exprC}{g}
+\newcommand{\exprD}{h}
+\newcommand{\val}{v}
+\newcommand{\valB}{w}
+\newcommand{\valC}{u}
+\newcommand{\var}{x}
+\newcommand{\varB}{y}
+\newcommand{\varC}{z}
+\newcommand{\typ}{\tau}
+\newcommand{\TForall}{\forall}
+\newcommand{\tvar}{\alpha}
+\newcommand{\tvarB}{\delta}
+\newcommand{\tvarC}{\zeta}
+\newcommand{\typed}[4]{#1; #2 \vdash #3 : #4}
+% \newcommand{\semtyped}{4}
+\newcommand{\hstep}{\leadsto_h}
+\newcommand{\step}{\leadsto}
+\newcommand{\steps}{\leadsto^*}
+\newcommand{\Safe}[1]{\textbf{Safe}_{#1}}
+
 
 \title{Logical relations: safety of system F}
 \author{Amin Timany}
-\date{\today}
+\date{\today \footnote{These notes were originally released on August 17, 2016. The present version only includes minor improvements.}}
 
 \begin{document}
 \maketitle
 
-\paragraph{Note:} in these notes, we simply ignore the issues
-regarding the clash between variable names, e.g., capturing, by
-assuming that bound variables are renamed whenever necessary
-to avoid such problems.
+% \paragraph{Note:} in these notes, we simply ignore the issues
+% regarding the clash between variable names, e.g., capturing, by
+% assuming that bound variables are renamed whenever necessary
+% to avoid such problems.
 
 \section{Language}
 \subsection{Syntax}
-\[
-\begin{array}{llll}
-\textit{variables}(\VAR) & \multicolumn{3}{l}{x, y, z, \dots}\\
-\textit{expressions}(\EXP) & e &::=& x \gor \TT \gor (e, e)
-\gor \fst~e \gor \snd~e \gor \lambda x.~e \gor e~e
-\gor \Lambda~e \gor e~\bullet\\
-\textit{values}(\VAL) & v &::=& \TT \gor (v, v) \gor \lambda x.~e
-\gor \Lambda~e
-\end{array}
-\]
+\begin{align*}
+\textit{variables} (\VAR) \hspace{1em} \phantom{\var ::={}}& \var, \varB, \varC, \dots\\
+\textit{expressions} (\EXP) \hspace{1em} \expr ::={}& \var \gor \TT \gor (\expr, \expr)
+\gor \fst~\expr \gor \snd~\expr \gor \lambda \var.~\expr \gor \expr~\expr
+\gor \TLam~\expr \gor \expr~\TArg\\
+\textit{values} (\VAL) \hspace{1em} \val ::={}& \TT \gor (\val, \val) \gor \lambda \var.~\expr
+\gor \TLam~\expr
+\end{align*}
 The set of values is a subset of the set of expressions: $\VAL \subset \EXP$.
 
 \subsection{Types and typing}
+\begin{align*}
+\textit{type variables} (\TVAR) \hspace{1em} \phantom{\expr ::={}} & \tvar, \tvarB, \tvarC, \dots\\
+\textit{types} (\TYP) \hspace{1em} \typ ::={}& \tvar \gor \UNT \gor \typ \times\typ
+\gor \typ \to \typ \gor \TForall \tvar.~\typ
+\end{align*}
+The typing context that we consider is a pair of contexts consisting of $\CtxTps$, the context for type variables, and $\Tctx$, the context for term variables.
+The ``compound'' typing context (typing context for short) that we use in defining the typing rules is a pair of context written as $\CtxTps; \Tctx$.
+\begin{align*}
+\textit{typing context}~(\TCTX)\hspace{1em} \Tctx ::={}& \cdot \gor x : \typ, \Tctx\\
+\textit{context of typing variables}~(\TCTX)\hspace{1em} \CtxTps ::={}& \cdot \gor \tvar, \CtxTps
+\end{align*}
+Typing rules for our system F are:\\[0.5em]
+\hspace*{1em}\fbox{$\typed{\CtxTps}{\Tctx}{\expr}{\typ}$}
+\begin{mathparpagebreakable}
+  \inferH{T-Unit}{}{\typed{\CtxTps}{\Tctx}{\TT}{\UNT}}
+  \and
+  \inferH{T-Var}{\var : \typ \in \Tctx}{\typed{\CtxTps}{\Tctx}{\var}{\typ}}
+  \and
+  \inferH{T-Prod}{\typed{\CtxTps}{\Tctx}{\expr_1}{\typ_1} \and \typed{\CtxTps}{\Tctx}{\expr_2}{\typ_2}}{\typed{\CtxTps}{\Tctx}{(\expr_1, \expr_2)}{\typ_1 \times \typ_2}}
+  \and
+  \inferH{T-Fst}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \times \typ_2}}{\typed{\CtxTps}{\Tctx}{\fst~\expr}{\typ_1}}
+  \and
+  \inferH{T-Snd}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \times \typ_2}}{\typed{\CtxTps}{\Tctx}{\snd~\expr}{\typ_2}}
+  \and
+  \inferH{T-Lam}{\typed{\CtxTps}{\var : \typ_1, \Tctx}{\expr}{\typ_2}}{\typed{\CtxTps}{\Tctx}{\lambda x.~\expr}{\typ_1 \to \typ_2}}
+  \and
+  \inferH{T-App}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \to \typ_2} \and \typed{\CtxTps}{\Tctx}{\expr'}{\typ_1}}{\typed{\CtxTps}{\Tctx}{\expr~\expr'}{\typ_2}}
+  \and
+  \inferH{T-TLam}{\typed{\CtxTps}{\Tctx}{\expr}{\typ}}{\typed{\CtxTps}{\Tctx}{\TLam x.~e} : \TForall \tvar.~\typ}
+  \and
+  \inferH{T-TApp}{\typed{\CtxTps}{\Tctx}{\expr}{\TForall \tvar.~\typ}}{\typed{\CtxTps}{\Tctx}{\expr~\TArg}{\typ[\typ'/\tvar]}}
+\end{mathparpagebreakable}
+
 \[
-\begin{array}{llll}
-\textit{type variables}(\TVAR) & \multicolumn{3}{l}{\alpha, \delta, \zeta, \dots}\\
-\textit{types}(\TYP) & \tau &::=& \alpha \gor \UNT \gor \tau \times\tau
-\gor \tau \to \tau \gor \forall \alpha.~\tau
-\end{array}
+\hspace{2em}
+\hspace{2em}
 \]
-The typing context that we consider is a pair of contexts $\Omega$ the context for type variables and $\Gamma$ the context for term variables.
-The ``compound" typing context (typing context for short) that we use in defining the typing rules is a pair of context written as $\Omega; \Gamma$.
-\[
-\begin{array}{llll}
-\textit{typing context}(\TCTX) & \Gamma &::=& \cdot \gor x : \tau, \Gamma\\
-\textit{context of typing variables}(\TCTX) & \Omega &::=& \cdot \gor \alpha, \Omega
-\end{array}
-\]
-Typing rules for our system F are:
-\[
-\frac{}{\Omega; \Gamma \vdash \TT : \UNT}(\textsc{Unit})
-\hspace{2em}
-\frac{\Omega; x : \tau \in \Gamma}{\Omega; \Gamma \vdash x : \tau}(\textsc{Var})
-\hspace{2em}
-\frac{\Omega; \Gamma \vdash e_1 : \tau_1 \hspace{1em}
-\Omega; \Gamma \vdash e_2 : \tau_2}{\Omega; \Gamma \vdash (e_1, e_2) : \tau_1 \times \tau_2}(\textsc{Prod})
-\]
-\[
-\frac{\Omega; \Gamma \vdash e : \tau_1 \times \tau_2}{\Omega; \Gamma \vdash \fst~e : \tau_1}(\textsc{Fst})
-\hspace{2em}
-\frac{\Omega; \Gamma \vdash e : \tau_1 \times \tau_2}{\Omega; \Gamma \vdash \snd~e : \tau_2}(\textsc{Snd})
-\hspace{2em}
-\frac{\Omega; x : \tau_1, \Gamma \vdash e : \tau_2}{\Omega; \Gamma \vdash \lambda x.~e : \tau_1 \to \tau_2}(\textsc{Lam})
-\]
-\[
-\frac{\Gamma \vdash e : \tau_1 \to \tau_2 \hspace{1em}
-\Gamma \vdash e' : \tau_1}{\Gamma \vdash e~e' : \tau_2}(\textsc{App})
-\hspace{2em}
-\frac{\Omega; \Gamma \vdash e : \tau}{\Omega; \Gamma \vdash \lambda x.~e : \forall \alpha.~\tau}(\textsc{TLam})
-\hspace{2em}
-\frac{\Omega; \Gamma \vdash e : \forall \alpha.~\tau}
-{\Omega; \Gamma \vdash e~\bullet : \tau[\tau'/\alpha]}(\textsc{TApp})\\
-\]
-we write $e : \tau$ as a shorthand for $\cdot; \cdot \vdash e : \tau$.
+we write $e : \typ$ as a shorthand for $\typed{\cdot}{\cdot}{\expr}{\typ}$.
 \subsection{Operational semantics (CBV)}
-We describe the small-step call-by-value (CBV) operational semantics for system F. We do this in two steps. This is more-or-less the standard for describing the semantics of a CBV language.
-In the first step we give the head reduction relation ($\leadsto$).
+We describe the small-step call-by-value (CBV) operational semantics for system F.
+In the first step we give the head reduction relation ($\hstep$).
 In the second step we extend this to non-head reductions using
 evaluation context ($\ECTX$).
 
 \paragraph{Head reduction:}
-\[
-\fst~(v_1, v_2) \leadsto v_1 \hspace{2em}
-\snd~(v_1, v_2) \leadsto v_2 \hspace{2em}
-(\lambda x.~e)~v \leadsto e[v/x] \hspace{2em}
-(\Lambda~e)~\bullet \leadsto e
-\]
+\begin{align*}
+\fst~(\val_1, \val_2) \hstep \val_1 \hspace{2em}
+\snd~(\val_1, \val_2) \hstep \val_2 \hspace{2em}
+(\lambda x.~\expr)~\val \hstep \expr[\val/\var] \hspace{2em}
+(\TLam~e)~\TArg \hstep \expr
+\end{align*}
 Note that here $v$'s are values \emph{and not any expression}.
 $e[v/x]$ is the expression $e$ where all instances of $x$ are
 replaced with $v$. \emph{Remember that all substitutions are capture avoiding}.
 \paragraph{Non-head reduction:} If the redex (what is being reduced) is not in the head position (see above) then evaluation contexts determine where in the term a reduction can happen.
-\[
-\frac{e \leadsto e'}{\ectx[e] \leadsto \ectx[e']}
-\]
+\begin{mathpar}
+  \inferrule{\expr \hstep \expr'}{\ectx[\expr] \step \ectx[\expr']}{}
+\end{mathpar}
 where $\ectx$ is an evaluation context, i.e., $\ectx \in \ECTX$
-and $\ectx[e]$ is the expression where the single whole in the context $\ectx$ (see below) is substituted with $e$.
+and $\ectx[\expr]$ is the expression where the single whole in the context $\ectx$ (see below) is substituted with $\expr$.
 
 \paragraph{Evaluation Contexts:}
-\[
-\begin{array}{llll}
-\textit{evaluation contexts}(\ECTX) &\ectx &::=& \cdot
-\gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, e) \gor (v, \ectx)
-\gor \ectx~e \gor v~\ectx \gor \ectx~\bullet
-\end{array}
-\]
+\begin{align*}
+\textit{evaluation contexts}~ (\ECTX) \hspace{1em} \ectx ::={} \cdot
+\gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, \expr) \gor (\val, \ectx)
+\gor \ectx~\expr \gor \val~\ectx \gor \ectx~\TArg
+\end{align*}
 
-\paragraph{Remark:} In the sequel, we will use the word ``context"
+\paragraph{Remark:} In the sequel, we will use the word ``context''
 to refer to both typing contexts and evaluation contexts whenever
 the distinction is clear from the discussion at hand.
 
-\paragraph{Example:} The following is the only possible reduction
-for the expression:
+\paragraph{Example:} The following is the only possible reduction for the expression
+\[\fst~((\lambda \var.~((\lambda \varB.~ \TT)~\var, (\lambda \varB.~ \var)~\TT))~\TT)\]
+showing that it reduces to $\TT$
 \[
-\fst~((\lambda x.~((\lambda y.~ \TT)~x, (\lambda y.~ x)~\TT))~\TT)
-\]
-
-\[
-\fst~((\lambda x.~((\lambda y.~ \TT)~x, (\lambda y.~ x)~\TT))~\TT) \leadsto
-\fst~((\lambda y.~ \TT)~\TT, (\lambda y.~ \TT)~\TT) \leadsto
-\fst~(\TT, (\lambda y.~ \TT)~\TT)
+\fst~((\lambda \var.~((\lambda \varB.~ \TT)~\var, (\lambda \varB.~ \var)~\TT))~\TT) \step
+\fst~((\lambda \varB.~ \TT)~\TT, (\lambda \varB.~ \TT)~\TT) \step
+\fst~(\TT, (\lambda \varB.~ \TT)~\TT)
 \]
 \[
-\leadsto \fst~(\TT, \TT) \leadsto \TT
+\step \fst~(\TT, \TT) \step \TT
 \]
 
-\paragraph{Exercise:} Determine the evaluation context for each step of the reduction above.
+% \paragraph{Exercise:} Determine the evaluation context for each step of the reduction above.
 
-We use $\leadsto^*$ to denote reflexive and transitive closure of $\leadsto$.
+We use $\steps$ to denote reflexive and transitive closure of $\step$.
 
 \section{Type safety}
 We say a language is type safe or has the type safety property if:
 \[
-\forall e, \tau.~e : \tau \Rightarrow \mathbf{Safe}(e)
+\forall \expr, \typ.\; \expr : \typ \Rightarrow \mathbf{Safe}(\expr)
 \]
 where
 \[
-\mathbf{Safe}(e) \defeq \forall e'.~ e \leadsto^* e'
-\Rightarrow e' \in \VAL \lor \exists e''.~e\leadsto e''
+\mathbf{Safe}(\expr) \defeq \forall \expr'.~ \expr \steps \expr'
+\Rightarrow \expr' \in \VAL \lor \exists \expr''.~\expr\step \expr''
 \]
-For system F, type safety can be proven using the well-known progress and preservation technique. In these notes we ignore this well-known technique for the sake of developing a simple use cases of logical relations.
+For system F, type safety can be proven using the well-known progress and preservation technique. In these notes we instead use the logical relations technique which also allows us to derive some ``theorems for free''.
 
-\section{Logical relations}
-It seems only natural, given the statement of type safety (with the form $e : \tau$ implying safety), to try proving this statement with induction on the typing derivation.
+\section{Logical relations (First Attempt)}
+It seems only natural, given the statement of type safety, \ie{} $\expr : \typ$ implies safety, to try to prove this statement by induction on the typing derivation.
 As we will see below, applying induction directly on the statement of type safety does not allow us to prove it.
 
-What we do in this section is attempting to apply induction to type safety and each time this fails we change the statement of the theorem that we prove so that induction is applicable. In each step, we show that the statement that we consider implies type safety and hence proving the theorem considered gives us the desired result.
+What we do in this section is attempting to apply induction to type safety and each time this fails we change (stengthen) the statement of the theorem until we can successfully apply induction. In each step, we show that the statement that we consider implies type safety.
 
 \paragraph{Attempt 1:}
 If we simply apply induction on the the typing derivation to prove
 type safety as stated above, we immediately run into a problem
-in the case \textsc{App}. In this case we have to prove $\mathbf{Safe}(e~e')$ and the only thing that we know is that $\mathbf{Safe}(e)$ and $\mathbf{Safe}(e')$.
-Particularly, notice the case where $e = \lambda x.~e''$.
-Since $e$ is already a value, its safety, says absolutely nothing about $e''$.
-Note that in this case, we can have $e' \leadsto^* v'$ and
-$(\lambda x.~e'')~v' \leadsto^* e''[v'/x]$.
+in the case \ruleref{T-App}. In this case we have to prove $\mathbf{Safe}(\expr~\expr')$ and the only thing that we know is that $\mathbf{Safe}(\expr)$ and $\mathbf{Safe}(\expr')$ both hold.
+Particularly, notice the case where $\expr = \lambda \var.~\exprB$ for some expression $\exprB$.
+Since $\expr$ is already a value, its safety says absolutely nothing about $\exprB$.
+Note that in this case, we can have $\expr' \steps \val'$ which means that $\expr~\expr' \steps (\lambda \var.~\exprB)~\val' \step \exprB[\val'/\var]$.
 In this case, we do not have enough information to show that
 \[
-e''[v'/x] \in \VAL \lor \exists e_2.~e''[v'/x] \leadsto e_2
+\exprB[\val'/\var] \in \VAL \lor \exists \exprC.~\exprB[\val'/\var] \step \exprC
 \]
 This is the key observation motivating logical relations.
-The essence of lambdas is that when applied, we substitute the
-term they are applied to with the lambda variable.
-The intuition being, lambdas are functions and when applied
-(just as is the case in ordinary mathematical functions) we substitute the term they are applied to for the function argument.
-
+It is not sufficient to know that expressions are safe.
+We need in addition to know that the resulting value has certain properties depending on its type.
+For instance, if $\expr$ is an expression of function type $\typ_1 \to \typ_2$, then any value $\val$ obtained from $\expr$ must be safe when applied to a value of type $\typ_1$ and moreover, the resulting value must satisfy the appropriate properties of the type $\typ_2$.
 The main idea of logical relations is simply just that.
-In fact, we could summarize the technique of logical relations into
-the slogan: \emph{Lambdas are functions}.
-In this regard, we define a relation (in this case a unary relation, i.e., a predicate) defined inductively on the types of the programming language. This predicate, in the case of function types (whose values are lambdas) specifically says that terms
-are in the predicate if they (vaguely speaking) lambdas that
-when applied to terms that have the desired property, result in
-a term with the desired property. We make this clear below.
+We define relations (in this case a \emph{unary} relation, \ie{}, a predicate) by induction on the types of the programming language.
+This predicate, in the case of function types (whose values are lambdas) specifically states that terms are in the predicate if they
+take terms in the predicate for the domain to terms in the predicate for the codomain.
 
-\paragraph{Note:} This issue is not observed in the case of
-\textsc{TApp}. In this case, $e~\bullet \leadsto e$ and the safety
-of $e$ is simply the induction hypothesis. 
+\paragraph{Note:} A similar issue is not observed in the case of \ruleref{T-TApp}.
+In that case, $(\TLam~\expr)~\TArg \step \expr$ and the safety of $\expr$ is simply the induction hypothesis.
 
-\subsection{The logical predicates for type safety}
-We define these predicates in two stages. First, we define a
-set of predicates on values defined recursively on types.
-In the second stage we extend these predicates to all expressions.
-Notice that since these predicates are defined by recursion on
-types and types can have free variables, we need to consider
-the interpretation of free type variables.
-We use a partial mapping $\xi$ which maps type variables to
-predicates.
+\section{Parameterized Safety}
+\label{sec:safety}
 
-\paragraph{Safety logical predicates on values $\left(\semtyp{}{\Omega \vdash \tau}^{\xi}\right)$:}
+Above, we argued that logical relations for safety of our system would essentially state that an expression in the relation must be safe, and in addition, the resulting value must satisfy certain properties.
+In order to formalize this idea we introduce the following parameterized safety predicate (parameterized over a predicate on values) which we will later use in the definition of logical relations.
+\begin{align*}
+  \Safe{\pred}(\expr) \defeq{}& \forall \expr'.~ \expr \steps (\expr' \Rightarrow \expr' \in \VAL \land P(\expr')) \lor \exists \expr''.~\expr \step \expr''
+\end{align*}
+Note how this predicate also implies Safety as defined earlier.
+The parameterized safety predicate satisfies the following interesting properties:
+
+\section{Logical Relations}
+We define the predicates associated with types in two stages.
+We first define a predicate $\semErel{\pred}$ on expressions given a predicate $\pred$ on values which essentially the parameterized safety predicate we defined above --- this is essentially a new, more concise, and more consistent notation for the parameterized safety relation.
+\begin{align*}
+  \semErel{\pred}(\expr) \defeq{}& \Safe{\pred}(\expr)
+\end{align*}
+This relation is essentially the safety predicate which in addition states then the resulting value must in addition also satisfy $\pred$.
+We then define a set of predicates on values defined recursively on types.
+Notice that since these predicates are defined by recursion on types and types can have free variables, we need to consider the interpretation of free type variables.
+Hence, the predicates the we define on values, and therefore also the predicates on all expressions, must be decorated with a mapping $\semenv$ from type variables to predicates.
+Intuitively, $\semenv$ maps each type variable to its associated predicate on values.
+
+\paragraph{Predicates on values $\left(\semtyp{\semenv}{\CtxTps}{\typ}\right)$:}
 Let us have a firs na\"ive attempt at defining these logical
 predicates.
-\[
-\begin{array}{lll}
-\semtyp{}{\Omega \vdash \alpha}^{\xi} &\defeq& \xi(\alpha)\\
-\semtyp{}{\Omega \vdash \UNT}^{\xi}(v) &\defeq& v = \TT\\
-\semtyp{}{\Omega \vdash \tau_1 \times \tau_2}^{\xi}(v) &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
-\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_2)\\
-\semtyp{}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(v) &\defeq& \exists e, v = \lambda x.~e\land
-\forall v'.~\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(e[v/x])\\
-\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(v) &\defeq& \exists e, v = \Lambda~e\land
-\forall \tau'.~\mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}}(e) \hspace{1em} {\color{red}(incorrect)}
-\end{array}
-\]
-where $[\alpha \mapsto P]\xi$ is extending the partial mapping $\xi$ by additionally mapping $\alpha$ to $P$ and $\mathbf{Safe}_{P}(e)$ for a predicate $P$ on values is defined as
-\[
-\mathbf{Safe}_{P}(e) \defeq \forall e'.~ e \leadsto^* (e'
-\Rightarrow e' \in \VAL \land P(e')) \lor \exists e''.~e\leadsto e''
-\]
+\begin{align*}
+\semtyp{\semenv}{\CtxTps}{\tvar} \defeq{}& \semenv(\tvar)\\
+\semtyp{\semenv}{\CtxTps}{\UNT}(\val) \defeq{}& \val = \TT\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
+\semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr\land
+\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
+\semtyp{\semenv}{\CtxTps}{\TForall \tvar.~\typ}(\var) \defeq{}& \exists \expr, \val = \TLam~\expr\land
+\forall \typ'.~\semErel{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\expr) \hspace{1em} {\color{red}(incorrect)}
+\end{align*}
+where $[\tvar \mapsto P]\semenv$ is extending the mapping $\semenv$ by additionally associating $\tvar$ to $P$.
 
-The problem with the case $\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}$ is that this case is not \emph{exactly recursive}.
-In other words, $\tau'$ is not a constituent of $\forall \alpha.~\tau$.
-We can for example take $\tau'$ to be $\forall \alpha.~\tau$. This unrestricted choice of $\tau'$ is the essence of the problem.
+The problem with the case $\semtyp{\semenv}{\CtxTps}{\TForall \tvar.~\typ}$ is that in this case the type $\typ[\typ'/\tvar]$ is not \emph{smaller} than the type $\TForall \tvar.~\typ$ which makes the inductive definition above invalid.
+We can for example take $\typ'$ to be $\TForall \tvar.~\typ$ itself.
+The unrestricted choice of $\typ'$, \ie{}, the universal quantification, is the essence of the problem.
+Yet, it is necessary as the typing rule \ruleref{T-TApp} allows us to instantiate a polymorphic type with any arbitrary type $\typ'$.
 
 There are two ways that we can address this issue.
-A syntactical approach and a rather meta theoretical observation.
-Syntactically we can stratify types into an infinite hierarchy of types.
+The first approach is to restrict the range of $\typ'$ in the rule \ruleref{T-TApp}.
+We can do this by introducing an infinite hierarchy of so-called \emph{universes}:
 \[\mathsf{Tp}_0, \mathsf{Tp}_1, \dots\]
-We would then restrict that $\mathsf{Tp}_0$ has no types that include polymorphic types (types of the form $\forall \alpha.~\tau$).
-Furthermore, for any type $\forall \alpha.~\tau$ that belongs to
-$\mathsf{Tp}_{n+1}$, only a $\tau'$ in $\mathsf{Tp}_n$ can be
-used to substitute $\alpha$ in the typing rules.
-This allows us define the logical relations of system F by recursion on the $\mathsf{Tp}$'s and the structure of types in a
-nested fashion.
-This approach will certainly work and allow us to prove type safety (and when the logical predicates are adjusted
-appropriately) to prove (strong) normalization for system F.
-This way of treating polymorphic types is usually referred to
-as \emph{predicative} polymorphism.
-This is the approach taken in languages such as Coq and Agda.
+We would then restrict that $\mathsf{Tp}_0$ has no types that include polymorphic types (types of the form $\TForall \tvar.~\typ$).
+Furthermore, for any type $\TForall \tvar.~\typ$ that belongs to $\mathsf{Tp}_{n+1}$, only a $\typ'$ in $\mathsf{Tp}_i$ for $i \le n$ can be used to substitute $\tvar$ in the typing rules.
+This allows us define the logical relations of system F by recursion on the hierarchy of universes as well as the structure of types.
+This would allow us to prove type safety (and when the logical predicates are adjusted appropriately) to prove safety for system F --- though it would not allow us to derive ``theorems for free''!.
+This way of treating polymorphic types is usually referred to as \emph{predicative} polymorphism, as opposed to the \emph{impredicative} polymorphism of system F.
+This is the approach taken in the underlying languages of proof assistants such as Coq and Agda.
 
-We can however, treat polymorphic types in an
-\emph{impredicative} way, i.e., not restrict what can be
-substituted for in a polymorphic type ($\tau'$ above).
-This is based on a (as alluded to earlier) meta theoretical
-observation (akin to the fact lambdas are functions above) by J. Y. Girard
-and J. C. Reynolds.
-This meta level observation is that polymorphic types are
-not quantifying over all of the types of the language but rather
-they are quantifying over all possible types (including those that possibly have no syntactical counterpart in our language).
-The new logical predicates for system F is as follows:
+Here, we adjust our logical relations to work with the impredicative polymorphism system F.
+This is based on an insight by J. C. Reynolds, who alongside J. Y. Girard (independently) discovered system F.
+This insight is that the semantics (predicate) of polymorphic types should not quantifying over all of the types of the language but rather
+they must quantifying over all possible semantic types, \ie{}, all possible predicates over values.
+Note that this also includes all the predicates that are associated to the types of our language.
+The new logical relations for system F is defined as follows:
 
-\[
-\begin{array}{lll}
-\semtyp{}{\Omega \vdash \alpha}^{\xi} &\defeq& \xi(\alpha)\\
-\semtyp{}{\Omega \vdash \UNT}^{\xi}(v) &\defeq& v = \TT\\
-\semtyp{}{\Omega \vdash \tau_1 \times \tau_2}^{\xi}(v) &\defeq& \exists v_1, v_2.~v = (v_1, v_2) \land
-\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_1) \land \semtyp{}{\Omega \vdash \tau_1}^{\xi}(v_2)\\
-\semtyp{}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(v) &\defeq& \exists e, v = \lambda x.~e\land
-\forall v'.~\semtyp{}{\Omega \vdash \tau_1}^{\xi}(v') \Rightarrow \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(e[v/x])\\
-\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(v) &\defeq& \exists e, v = \Lambda~e\land
-\forall P \in 2^{\VAL}.~\mathbf{Safe}_{\semtyp{}{\alpha, \Omega \vdash \tau}^{[\alpha \mapsto P]\xi}}(e)
-\end{array}
-\]
+\begin{align*}
+\semtyp{\semenv}{\CtxTps}{\tvar} \defeq{}& \semenv(\tvar)\\
+\semtyp{\semenv}{\CtxTps}{\UNT}(\val) \defeq{}& v = \TT\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
+\semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr \land
+\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
+\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\val) \defeq{}& \exists \expr, \val = \TLam~\expr\land
+\forall P \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto P]\semenv}{\tvar, \CtxTps}{\typ}}(\expr)
+\end{align*}
 
-\paragraph{Safety logical predicates on expressions $\left(\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}\right)$:}
-\[
-\semtyp{\EXP}{\Omega \vdash \tau}^{\xi} \defeq \mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau}^{\xi}}(e)
-\]
+\paragraph{Note:} Note that we are implicitly assuming that the domain of the partial mapping $\semenv$ in $\semtyp{\semenv}{\CtxTps}{\typ}$ is always $\CtxTps$.
 
-\paragraph{Note:} It is obvious that $\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}$
-defined above implies $\mathbf{Safe}(e)$.
-\paragraph{Note:} Also note that we are implicitly assuming that the domain of
-the partial mapping $\xi$ in $\semtyp{}{\Omega \vdash \tau}^{\xi}$ is always $\Omega$.
+The value and expression relations above are defined over closed programs, \ie{}, programs where no free (term) variables appear.
+We extend the defined relations by substituting values in the logical relations for free variables.\footnote{For more details see my notes on logical relations for safety of simply-typed lambda calculus.}
+For this purpose we define when a sequence of values $\mathit{vs}$ is in the corresponding predicates for the types in a context $\Tctx$, written as $\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})$.
 
-Here we accounted for free type variables (variables appearing
-in $\Omega$) by adding a partial
-mapping $\xi$ from type variables to predicates on values.
-Similarly, we have to account for free term variables (variables
-appearing in $\Gamma$)\footnote{For more details on this
-issue look at my notes on logical relations for safety of
-simply-typed lambda calculus.}.
-We do this by defining sequences of terms $\mathit{vs}$
-that are in the corresponding predicates in the context
-$\Gamma$, written as $\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs})$.
-
-\paragraph{Sequences of terms in the predicate}
-A sequence of terms $\mathit{vs} = v_1, \dots,v_n$ is said to be in the predicates for a context
-$\Gamma = x_1 : \tau_1,\dots, x_n : \tau_n$ under the type
-context $\Omega$ (with interpretation $\xi$), written as $\semtyp{}{\Omega \vdash \Gamma}^{\xi}(vs)$ if
-\[
-\begin{array}{lll}
-\semtyp{}{\Omega \vdash \cdot}^{\xi}(\mathit{vs}) &\defeq&
-|\mathit{vs}| = 0\\
-\semtyp{}{\Omega \vdash x : \tau, \Gamma}^{\xi}(\mathit{vs})
-&\defeq& vs = v_1, \mathit{vs'} \land
-\semtyp{}{\Omega \vdash \tau}^{\xi}(v_1) \land
-\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs'})
-\end{array}
-\]
+\paragraph{The relation on sequences of terms}
+A sequence of terms $\mathit{vs} = \val_1, \dots,\val_n$ is said to be in the predicates for a context $\Tctx = \var_1 : \typ_1,\dots, \var_n : \typ_n$ under the context of type variables $\CtxTps$ (with interpretation $\semenv$), written as $\semtyp{\semenv}{\CtxTps}{\Tctx}(vs)$ if
+\begin{align*}
+\semtyp{\semenv}{\CtxTps}{\cdot}(\mathit{vs}) \defeq{}& |\mathit{vs}| = 0\\
+\semtyp{\semenv}{\CtxTps}{\var : \typ, \Tctx}(\mathit{vs}) \defeq{}& \exists \val, \mathit{vs'}.\; \mathit{vs} = \val, \mathit{vs'} \land \semtyp{\semenv}{\CtxTps}{\typ}(\val) \land \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs'})
+\end{align*}
 
 \paragraph{Attempt 2:} In this final attempt we prove the following theorem, known as the fundamental theorem (or fundamental lemma) of logical relations.
 
 \begin{theorem}[Fundamental theorem of logical relations]
-For any $e$, $\Omega$, $\Gamma$ and $\tau$ such that $\Omega; \Gamma \vdash e : \tau$ we have:
+For any $e$, $\CtxTps$, $\Tctx$ and $\typ$ such that $\typed{\CtxTps}{\Tctx}{\expr}{\typ}$ we have:
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\Omega \vdash \tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
+\semErel{\semtyp{\semenv}{\CtxTps}{\typ}}(\expr[\mathit{vs}/\mathit{xs}])
 \]
-where $\mathit{xs}$ is the sequence of variables of $\Gamma$ and
-$e[v_1, \dots, v_n/x_1, \dots, x_n]$ is the term $e$ where $v_i$'s are substituted with $x_i$'s simultaneously.
+where $\mathit{xs}$ is the sequence of variables of $\Tctx$ and $\expr[\mathit{vs}/\mathit{xs}]$ is a shorthand for $\expr[\val_1, \dots, \val_n/\var_1, \dots, \var_n]$ which is the term $\expr$ where $\var_i$'s are substituted with $\val_i$'s simultaneously.
 \end{theorem}
 
 \begin{proof}
-By induction on the derivation of $\Omega ; \Gamma \vdash e : \tau$.
+By induction on the derivation of $\typed{\CtxTps}{\Tctx}{\expr}{\typ}$.
 Here we prove the cases \textsc{App}, \textsc{TApp},
 \textsc{Lam} and \textsc{TLam}.
 We leave the rest of the cases as an easy exercise.
-The case of \textsc{App} is very similar to its proof in the previous attempt.
 
 \paragraph{Case \textsc{App}:}
-Let us consider the case of \textsc{App} which was problematic before.
+Let us consider the case of \ruleref{T-App} which was problematic in the first attempt.
 We need to show that
 \footnote{Note that
-$(e~e')[\mathit{vs}/\mathit{xs}] = e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}]$.}
+$(\expr~\expr')[\mathit{vs}/\mathit{xs}] = \expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}]$.}
 \[
-\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\Omega \vdash \tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}]~e'[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
+\semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}])
 \]
-knowing that
+knowing that both (induction hypotheses)
+\[\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}}(\expr[\mathit{vs}/\mathit{xs}])
+\]
+and
 \[
-\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])
-\hspace{0.5em}\text{ and }\hspace{0.5em}
-\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\Omega \vdash \tau_1
-}(e'[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
+\semErel{\semtyp{\semenv}{\CtxTps}{\typ_1}}(\expr'[\mathit{vs}/\mathit{xs}])
 \]
-
-For the rest of this case, we assume some arbitrary but fixed $\xi$ and $\mathit{vs}$.
-We, in addition, write $f$ for $e[\mathit{vs}/\mathit{xs}]$
+hold.
+For the rest of this case, we assume some arbitrary but fixed $\semenv$ and $\mathit{vs}$.
+We, in addition, write $f$ for $\expr[\mathit{vs}/\mathit{xs}]$
 and $f'$ for $e'[\mathit{vs}/\mathit{xs}]$.
 
-We know that either \textbf{(case 1)} $f~f' \leadsto^* f''~f'$ if $f \leadsto^* f''$
-or \textbf{(case 2)} to $f~f' \leadsto^* f~f''$ if $e$ is already a value and $f' \leadsto^* f''$.
+We know that either \textbf{(case 1)} $f~f' \steps f''~f'$ if $f \steps f''$
+or \textbf{(case 2)} to $f~f' \steps f~f''$ if $\expr$ is already a value and $f' \steps f''$.
 
 Let us consider \textbf{(case 1)}.
-In \textbf{(case 1)}, safety of $f$ implies that $f''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $f_2$ such that $f'' \leadsto f_2$. In \textbf{(case 1.2)}, we have $f''~f' \leadsto f_2~f'$ which proves
-the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\EXP}{\Omega \vdash \tau_2}^{\xi}}(f~f')$.
+In \textbf{(case 1)}, safety of $\exprB$ implies that $\exprB''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $\exprB_2$ such that $\exprB'' \step \exprB_2$. In \textbf{(case 1.2)}, we have $\exprB''~\exprB' \step \exprB_2~\exprB'$ which proves
+the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\semenv\EXP}{\CtxTps}{\typ_2}}(\exprB~\exprB')$.
 
-Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $f$ is
-a value and therefore we have $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}(f)$ and thus $f = \lambda x.~f_1$.
-In this case, $f~f' \leadsto^* f~f''$ if $f \leadsto^* f''$. Safety of $f'$ now implies that
-either $f''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $f_2$ such that
-$f'' \leadsto f_2$.
-In \textbf{(case 2.1)} we need to show that $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}((\lambda x.~f_1)~f'')$ where $f''$ is a value. This simply follows from the fact that $(\lambda x.~f_1)~f'' \leadsto f_1[f''/x]$ and the definition of $\semtyp{\EXP}{\Omega \vdash \tau_1 \to \tau_2}^{\xi}$.
-In \textbf{(case 2.2)}, we have $f'' \leadsto f_2$ and therefore $f~f'' \leadsto f~f_2$ which
-proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{}{\Omega \vdash \tau_2}^{\xi}}(f~f')$.
+Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $\exprB$ is
+a value and therefore we have $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}(\exprB)$ and thus $\exprB = \lambda \var.~\exprB_1$.
+In this case, $\exprB~\exprB' \steps \exprB~\exprB''$ if $\exprB \steps \exprB''$. Safety of $\exprB'$ now implies that
+either $\exprB''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $\exprB_2$ such that
+$\exprB'' \step \exprB_2$.
+In \textbf{(case 2.1)} we need to show that $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}((\lambda \var.~\exprB_1)~\exprB'')$ where $\exprB''$ is a value. This simply follows from the fact that $(\lambda \var.~\exprB_1)~\exprB'' \step \exprB_1[\exprB''/\var]$ and the definition of $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}$.
+In \textbf{(case 2.2)}, we have $\exprB'' \step \exprB_2$ and therefore $\exprB~\exprB'' \step \exprB~\exprB_2$ which
+proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\exprB~\exprB')$.
 
 \paragraph{Case \textsc{TApp}:}
 For \textsc{TApp}, we know that
 \[
-\forall \xi, \mathit{vs}.~\semtyp{\EXP}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}.~\semtyp{\semenv\EXP}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])
 \]
 and we have to show that
 \[
-\forall \xi, \mathit{vs}, \tau'.~\semtyp{\EXP}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}((e~\bullet)[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}, \typ'.~\semtyp{\semenv\EXP}{\CtxTps}{\typ[\typ'/\tvar]}((\exprB~\TArg)[\mathit{vs}/\mathit{xs}])
 \]
 which is equivalent to
 \[
-\forall \xi, \mathit{vs}, \tau'.~\semtyp{\EXP}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}(e[\mathit{vs}/\mathit{xs}]~\bullet)
+\forall \semenv, \mathit{vs}, \typ'.~\semtyp{\semenv\EXP}{\CtxTps}{\typ[\typ'/\tvar]}(\expr[\mathit{vs}/\mathit{xs}]~\TArg)
 \]
 In the rest of this case, we assume that we have arbitrary
-but fixed $\xi$, $\mathit{vs}$ and $\tau'$.
+but fixed $\semenv$, $\mathit{vs}$ and $\typ'$.
 
-Here we know that if $e[\mathit{vs}/\mathit{xs}]~\bullet \leadsto^* f$
-for some $f$, then either $f = e'~\bullet$ in which case, we must 
-have that $e[\mathit{vs}/\mathit{xs}] \leadsto^* e'$ and then
-either $e'$ is a value or it reduces in one more step
-(we know this from $\semtyp{\EXP}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])$).
-Or, $e'$ is a value. This latter case is similar to the case where $e[\mathit{vs}/\mathit{xs}]$ is a value in the first place.
+Here we know that if $\expr[\mathit{vs}/\mathit{xs}]~\TArg \steps \exprB$
+for some $f$, then either $\exprB = \expr'~\TArg$ in which case, we must
+have that $\expr[\mathit{vs}/\mathit{xs}] \steps \expr'$ and then
+either $\expr'$ is a value or it reduces in one more step
+(we know this from $\semtyp{\semenv\EXP}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])$).
+Or, $\expr'$ is a value. This latter case is similar to the case where $e[\mathit{vs}/\mathit{xs}]$ is a value in the first place.
 We prove this case below:
 
 In this case, we know that
 \[
-\semtyp{}{\Omega \vdash \forall \alpha.~\tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])
 \]
 and equivalently
 \[
-\exists f.~e[\mathit{vs}/\mathit{xs}] = \Lambda~f \land
-\forall P \in 2^{\VAL}.~\mathbf{Safe}{\semtyp{}{\alpha, \Omega \vdash \tau}
-^{[P/\alpha]\xi}}(f)
+\exists \exprB.~\expr[\mathit{vs}/\mathit{xs}] = \TLam~\exprB \land
+\forall P \in 2^{\VAL}.~\mathbf{Safe}{\semtyp{\semenv}{\tvar, \CtxTps}{\typ}
+^{[P/\tvar]\semenv}}(f)
 \]
-Thus, for any term $e'$ such that
-$e[\mathit{vs}/\mathit{xs}]~\bullet \leadsto e'$, we must have
-$f \leadsto e'$.
+Thus, for any term $\expr'$ such that
+$\expr[\mathit{vs}/\mathit{xs}]~\TArg \step \expr'$, we must have
+$\exprB \step \expr'$.
 Now we must show that
 \[
-(e' \in \VAL \land 
-\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}^{\xi}(e'))
+(\expr' \in \VAL \land
+\semtyp{}{\CtxTps}{\typ[\typ'/\tvar]}(\expr'))
 \lor
-\exists e''.~e' \leadsto e''
+\exists \expr''.~\expr' \step \expr''
 \]
 Notice that this is trivially follows from
 \[
-\mathbf{Safe}{\semtyp{}{\Omega \vdash \tau[\tau'/\alpha]}
-^{\xi}}(f)
+\mathbf{Safe}{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}
+}(f)
 \equiv
-\mathbf{Safe}{\semtyp{}{\alpha, \Omega \vdash \tau}
-^{[\alpha \mapsto \semtyp{}{\Omega \vdash \tau'}^{\xi}]\xi}}(f)
+\mathbf{Safe}{\semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\tvar, \CtxTps}{\typ}}(\exprB)
 \]
 
 \paragraph{Case \textsc{Lam}:}
 Let us consider the case \textsc{Lam}. In this case, we have to show that
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{\EXP}{\tau_1 \to \tau_2}^{\xi}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
+\semtyp{\semenv\EXP}{\typ_1 \to \typ_2}((\lambda \var.~\expr)[\mathit{vs}/\mathit{xs}])
 \]
-Since $(\lambda x.~e)$ is already a value, we have to show that:
+Since $(\lambda \var.~\expr)$ is already a value, we have to show that:
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_1 \to \tau_2}^{\xi}((\lambda x.~e)[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
+\semtyp{\semenv}{\typ_1 \to \typ_2}((\lambda \var.~\expr)[\mathit{vs}/\mathit{xs}])
 \]
 and equivalently
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_1 \to \tau_2}^{\xi}(\lambda x.~e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
+\semtyp{}{\typ_1 \to \typ_2}(\lambda \var.~\expr[\mathit{vs}/\mathit{xs}])
 \]
 which is equivalent to 
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{\Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\forall v.~\semtyp{}{\tau_1}^{\xi}(v) \Rightarrow \semtyp{}{\tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])[x/v]
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
+\forall \val.~\semtyp{\semenv}{\typ_1}(\val) \Rightarrow \semtyp{\semenv}{\typ_2}(\expr[\mathit{vs}/\mathit{xs}])[\var/\val]
 \]
 and by induction hypothesis we have
 \[
-\forall \xi, \mathit{vs}. ~\semtyp{}{x : \tau, \Gamma}^{\xi}(\mathit{vs}) \Rightarrow
-\semtyp{}{\tau_2}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\var : \typ, \Tctx}(\mathit{vs}) \Rightarrow
+\semtyp{\semenv}{\typ_2}(\expr[\mathit{vs}/\mathit{xs}])
 \]
-It is simple to see that $(e[\mathit{vs}/\mathit{xs}])[x/v] = e[v, \mathit{vs}/x, \mathit{xs}]$
+It is simple to see that $(e[\mathit{vs}/\mathit{xs}])[\var/\val] = \expr[\val, \mathit{vs}/\var, \mathit{xs}]$
 which concludes the case \textsc{Lam}.
 
 \paragraph{Case \textsc{TLam}:}
 In this case we know that (from induction hypothesis)
 \[
-\forall \xi, \mathit{vs}.~\semtyp{}{\alpha, \Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow \semtyp{\EXP}
-{\alpha, \Omega \vdash \tau}^{\xi}(e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semtyp{\semenv\EXP}
+{\tvar, \CtxTps}{\typ}(\expr[\mathit{vs}/\mathit{xs}])
 \]
 and we have to show that
 \[
-\forall \xi, \mathit{vs}.~\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs}) \Rightarrow \semtyp{\EXP}
-{\Omega \vdash \forall \alpha.~\tau}^{\xi}(\Lambda~e[\mathit{vs}/\mathit{xs}])
+\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semtyp{\semenv\EXP}
+{\CtxTps}{\forall \tvar.~\typ}(\TLam~\expr[\mathit{vs}/\mathit{xs}])
 \]
 
-For the rest of this case, we assume an arbitrary $\xi$ (with the domain for $\Omega$) and
+For the rest of this case, we assume an arbitrary $\semenv$ (with the domain for $\CtxTps$) and
 some arbitrary but fixed $\mathit{vs}$ for which we know
-$\semtyp{}{\Omega \vdash \Gamma}^{\xi}(\mathit{vs})$.
+$\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})$.
 
-Notice that $\Lambda~e[\mathit{vs}/\mathit{xs}]$ is a value,
+Notice that $\TLam~\expr[\mathit{vs}/\mathit{xs}]$ is a value,
 thus, we have to show that
 \[
-\semtyp{} {\Omega \vdash \forall \alpha.~\tau}^{\xi}(\Lambda~e[\mathit{vs}/\mathit{xs}])
+\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\TLam~\expr[\mathit{vs}/\mathit{xs}])
 \]
 Which (unfolding the definition) means we have to show that
 \[
-\forall P \in 2^{\VAL}~\semtyp{\EXP}
-{\alpha, \Omega \vdash \tau}
-^{[\alpha \mapsto  \semtyp{} {\Omega \vdash \tau'}^{\xi}]\xi}(e[\mathit{vs}/\mathit{xs}])
+\forall P \in 2^{\VAL}~\semtyp{\semenv\EXP}{\tvar, \CtxTps}{\typ}
+^{[\tvar \mapsto  \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}(e[\mathit{vs}/\mathit{xs}])
 \]
 Which follows from the induction hypothesis.
 \end{proof}
@@ -492,84 +480,84 @@ fundamental theorem.
 Two such theorems that we proven below.
 
 \begin{theorem}
-Any term of type $\forall \alpha.~\alpha \to \alpha$ is the identity function.
+Any term of type $\forall \tvar.~\tvar \to \tvar$ is the identity function.
 \[
-\forall e, e : \forall \alpha.~\alpha \to \alpha \Rightarrow
-\forall v \in \VAL.~((e~\bullet)~v) \leadsto^* e' \Rightarrow
-e' \in \VAL \land e' = v \lor \exists e''.~e' \leadsto e''
+\forall \expr, \expr : \forall \tvar.~\tvar \to \tvar \Rightarrow
+\forall \val \in \VAL.~((\expr~\TArg)~\val) \steps \expr' \Rightarrow
+\expr' \in \VAL \land \expr' = v \lor \exists \expr''.~\expr' \step \expr''
 \]
 \end{theorem}
 
 \begin{proof}
 By the fundamental theorem above we know that
 \begin{align}
-\forall \xi.~ \semtyp{\EXP}{\cdot \vdash \forall \alpha.~\alpha \to \alpha}^{\xi}(e)
+\forall \semenv.~ \semtyp{\semenv\EXP}{\cdot}{\forall \tvar.~\tvar \to \tvar}(\expr)
 \label{TrueSemTyp}
 \end{align}
-On the other hand, if we have $((e~\bullet)~v) \leadsto^* e'$ we must have
-that $e' = ((f~\bullet)~v)$ for some $f$ or $e = \Lambda~g$ is a value and
-we have that $(g~v) \leadsto^* e'$.
-In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists f'.~f \leadsto f'$ but in that
+On the other hand, if we have $((\expr~\TArg)~\val) \steps \expr'$ we must have
+that $\expr' = ((\exprB~\TArg)~\val)$ for some $\exprB$ or $\expr = \TLam~\exprC$ is a value and
+we have that $(\exprC~\val) \steps \expr'$.
+In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists \exprB'.~\exprB \step \exprB'$ but in that
 case (from Formula~\ref{TrueSemTyp} above) we know that
-$e' \leadsto ((f'~\bullet)~v)$.
+$\expr' \step ((\exprB'~\TArg)~\val)$.
 
 In the latter case above (where $e$ is a value), we knwo
 (from Formula~\ref{TrueSemTyp} above) that
 \[
-\exists g.~e = \Lambda~g \land
-\forall P\in 2^{\VAL}.~\semtyp{\EXP}{\alpha \vdash \alpha \to \alpha}^{[\alpha \mapsto P]}(g)
+\exists \exprC.~\expr = \TLam~\exprC \land
+\forall P\in 2^{\VAL}.~\semtyp{\semenv\EXP}{\tvar}{\tvar \to \tvar}^{[\tvar \mapsto P]}(\exprC)
 \]
 In this case, we can take $P = \{v\}$. This means
 \[
-\semtyp{\EXP}{\alpha \vdash \alpha \to \alpha}^{[\alpha \mapsto \{v\}]}(g)
+\semtyp{\semenv\EXP}{\tvar}{\tvar \to \tvar}^{[\tvar \mapsto \{v\}]}(\exprC)
 \]
-Let us assume without loss of generality (we have assumed a similar other case) that $g$ is a value in which case we have
+Let us assume without loss of generality (we have assumed a similar other case) that $\exprC$ is a value in which case we have
 \[
-\exists h.~ g = \lambda x.~h \land \forall w.~ w \in \{v\}
-\Rightarrow \mathbf{Safe}_{\{v\}}(h[w/x])
+\exists \exprD.~ \exprC = \lambda \var.~\exprD \land \forall \valB.~ \valB \in \{\val\}
+\Rightarrow \mathbf{Safe}_{\{\val\}}(\exprD[\valB/\var])
 \]
 Therefore
 \[
-(g~v) \equiv ((\lambda x.~h)~v) \leadsto^* e' \Rightarrow
-(h[v/x]) \leadsto e' \Rightarrow
-e' \in \VAL \land e' \in \{v\} \lor \exists e''.~e' \leadsto e''
+(\exprC~v) \equiv ((\lambda \var.~\exprD)~\val) \steps \expr' \Rightarrow
+(\exprD[\val/\var]) \step \expr' \Rightarrow
+\expr' \in \VAL \land \expr' \in \{\val\} \lor \exists \expr''.~\expr' \step \expr''
 \]
 \end{proof}
 
 \begin{theorem}
-Any term of type $\forall \alpha.~\alpha$ is divergent.
+Any term of type $\forall \tvar.~\tvar$ is divergent.
 \[
-\forall e, e : \forall \alpha.~\alpha \Rightarrow
-(e~\bullet) \leadsto^* e' \Rightarrow \exists e''.~e' \leadsto e''
+\forall e, e : \forall \tvar.~\tvar \Rightarrow
+(\expr~\TArg) \steps \expr' \Rightarrow \exists \expr''.~\expr' \step \expr''
 \]
 \end{theorem}
 
 \begin{proof}
 By the fundamental theorem above we know that
 \begin{align}
-\forall \xi.~ \semtyp{\EXP}{\cdot \vdash \forall \alpha.~\alpha}^{\xi}(e)
+\forall \semenv.~ \semtyp{\semenv\EXP}{\cdot}{\forall \tvar.~\tvar}(\expr)
 \label{FalseSemTyp}
 \end{align}
-On the other hand, if we have $(e~\bullet) \leadsto^* e'$ we must have
-that $e' = (f~\bullet)$ for some $f$ or $e = \Lambda~g$ is a value and
-we have that $g \leadsto^* e'$.
-In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists f'.~f \leadsto f'$ but in that
+On the other hand, if we have $(\expr~\TArg) \steps \expr'$ we must have
+that $\expr' = (\exprB~\TArg)$ for some $\exprB$ or $\expr = \TLam~\exprC$ is a value and
+we have that $\exprC \steps \expr'$.
+In the former case, we know that $\exprB$ is either a value (which is analogous to the latter case) or $\exists \exprB'.~\exprB \step \exprB'$ but in that
 case (from Formula~\ref{FalseSemTyp} above) we know that
-$e' \leadsto (f'~\bullet)$.
+$\expr' \step (\exprB'~\TArg)$.
 
-In the latter case above (where $e$ is a value), we knwo
+In the latter case above (where $\expr$ is a value), we knwo
 (from Formula~\ref{FalseSemTyp} above) that
 \[
-\exists g.~e = \Lambda~g \land
-\forall P\in 2^{\VAL}.~\semtyp{\EXP}{\alpha \vdash \alpha}^{[\alpha \mapsto P]}(g)
+\exists \exprC.~\expr = \TLam~\exprC \land
+\forall P\in 2^{\VAL}.~\semtyp{\semenv\EXP}{\tvar}{\tvar}^{[\tvar \mapsto P]}(\exprC)
 \]
 In this case, we can take $P = \emptyset$. This means
 \[
-\semtyp{\EXP}{\alpha \vdash \alpha}^{[\alpha \mapsto \emptyset]}(g)
+\semtyp{\semenv\EXP}{\tvar}{\tvar}^{[\tvar \mapsto \emptyset]}(\exprC)
 \]
 By definition this is equivalent to
 \[
-\mathbf{Safe}_{\emptyset}(g)
+\mathbf{Safe}_{\emptyset}(\exprC)
 \]
 Which is precisely what we wanted to prove.
 \end{proof}
