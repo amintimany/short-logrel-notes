@@ -11,8 +11,6 @@
 \usepackage[colorlinks]{hyperref}
 \usepackage{microtype}
 
-\newtheorem{theorem}{Theorem}
-
 \newcommand{\ie}{\textit{i.e.}}
 \newcommand{\eg}{\textit{e.g.}}
 
@@ -28,8 +26,10 @@
 \newcommand{\TCTX}{\mathsf{TCtx}}
 \newcommand{\ECTX}{\mathsf{ECtx}}
 \newcommand{\ectx}{\mathbf{K}}
+\newcommand{\empectx}{[]}
 \newcommand{\defeq}{\overset{\Delta}{=}}
 \newcommand{\pred}{P}
+\newcommand{\predB}{Q}
 \newcommand{\semtyp}[3]{\left\llbracket #2 \vdash #3 \right\rrbracket_{#1}}
 \newcommand{\semErel}[1]{#1^{\textbf{E}}}
 \newcommand{\semenv}{\xi}
@@ -114,16 +114,11 @@ Typing rules for our system F are:\\[0.5em]
   \and
   \inferH{T-App}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \to \typ_2} \and \typed{\CtxTps}{\Tctx}{\expr'}{\typ_1}}{\typed{\CtxTps}{\Tctx}{\expr~\expr'}{\typ_2}}
   \and
-  \inferH{T-TLam}{\typed{\CtxTps}{\Tctx}{\expr}{\typ}}{\typed{\CtxTps}{\Tctx}{\TLam x.~e} : \TForall \tvar.~\typ}
+  \inferH{T-TLam}{\typed{\tvar, \CtxTps}{\Tctx}{\expr}{\typ} \and \tvar ~\text{ does not appear freely in }~ \Tctx}{\typed{\CtxTps}{\Tctx}{\TLam\; e}{\TForall \tvar.~\typ}}
   \and
   \inferH{T-TApp}{\typed{\CtxTps}{\Tctx}{\expr}{\TForall \tvar.~\typ}}{\typed{\CtxTps}{\Tctx}{\expr~\TArg}{\typ[\typ'/\tvar]}}
 \end{mathparpagebreakable}
 
-\[
-\hspace{2em}
-\hspace{2em}
-\]
-we write $e : \typ$ as a shorthand for $\typed{\cdot}{\cdot}{\expr}{\typ}$.
 \subsection{Operational semantics (CBV)}
 We describe the small-step call-by-value (CBV) operational semantics for system F.
 In the first step we give the head reduction relation ($\hstep$).
@@ -149,7 +144,7 @@ and $\ectx[\expr]$ is the expression where the single whole in the context $\ect
 
 \paragraph{Evaluation Contexts:}
 \begin{align*}
-\textit{evaluation contexts}~ (\ECTX) \hspace{1em} \ectx ::={} \cdot
+\textit{evaluation contexts}~ (\ECTX) \hspace{1em} \ectx ::={} \empectx
 \gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, \expr) \gor (\val, \ectx)
 \gor \ectx~\expr \gor \val~\ectx \gor \ectx~\TArg
 \end{align*}
@@ -177,12 +172,12 @@ We use $\steps$ to denote reflexive and transitive closure of $\step$.
 \section{Type safety}
 We say a language is type safe or has the type safety property if:
 \[
-\forall \expr, \typ.\; \expr : \typ \Rightarrow \mathbf{Safe}(\expr)
+\forall \expr, \typ.\; \typed{\cdot}{\cdot}{\expr}{\typ} \implies \mathbf{Safe}(\expr)
 \]
 where
 \[
 \mathbf{Safe}(\expr) \defeq \forall \expr'.~ \expr \steps \expr'
-\Rightarrow \expr' \in \VAL \lor \exists \expr''.~\expr\step \expr''
+\implies \expr' \in \VAL \lor \exists \expr''.~\expr\step \expr''
 \]
 For system F, type safety can be proven using the well-known progress and preservation technique. In these notes we instead use the logical relations technique which also allows us to derive some ``theorems for free''.
 
@@ -221,10 +216,56 @@ In that case, $(\TLam~\expr)~\TArg \step \expr$ and the safety of $\expr$ is sim
 Above, we argued that logical relations for safety of our system would essentially state that an expression in the relation must be safe, and in addition, the resulting value must satisfy certain properties.
 In order to formalize this idea we introduce the following parameterized safety predicate (parameterized over a predicate on values) which we will later use in the definition of logical relations.
 \begin{align*}
-  \Safe{\pred}(\expr) \defeq{}& \forall \expr'.~ \expr \steps (\expr' \Rightarrow \expr' \in \VAL \land P(\expr')) \lor \exists \expr''.~\expr \step \expr''
+  \Safe{\pred}(\expr) \defeq{}& \forall \expr'.~ \expr \steps \expr' \implies (\expr' \in \VAL \land P(\expr')) \lor \exists \expr''.~\expr \step \expr''
 \end{align*}
-Note how this predicate also implies Safety as defined earlier.
+Note how the predicate $\Safe{\pred}(\expr)$, regardless of the predicate $\pred$, implies $\Safe{}(\expr)$ as defined earlier.
 The parameterized safety predicate satisfies the following interesting properties:
+
+\newtheorem*{safevallemma}{Safe-Val}
+\newtheorem*{safebindlemma}{Safe-Bind}
+\newtheorem*{safesteplemma}{Safe-Step}
+\newtheorem*{safemonolemma}{Safe-Mono}
+
+\begin{safevallemma}
+  \makeatletter\def\@currentlabel{Safe-Mono}\makeatother
+  \label{lem:safemono}
+  Let $\expr$ be an expression and $\pred$ and $\predB$ be two predicate on values, we have
+  \[(\forall \val.\; \pred(\val) \implies \predB(\val)) \implies \Safe{\pred}(\expr) \implies \Safe{\predB}(\expr)\]
+\end{safevallemma}
+
+
+\begin{safevallemma}
+  \makeatletter\def\@currentlabel{Safe-Val}\makeatother
+  \label{lem:safeval}
+  Let $\val$ be a value and $\pred$ be a predicate on values, we have
+  \[\pred(\val) \implies \Safe{\pred}(\val)\]
+\end{safevallemma}
+
+\begin{safebindlemma}
+  \makeatletter\def\@currentlabel{Safe-Bind}\makeatother
+  \label{lem:safebind}
+  Let $\ectx$ be an evaluation context, $\expr$ be an expression, and $\pred$ be a predicate on values.
+  The following holds:
+  \[\Safe{\pred_{\ectx}}(\expr) \implies \Safe{\pred}(\ectx[\expr])\]
+  where
+  \[\pred_{\ectx}(\val) \defeq{} \Safe{\pred}(\ectx[\val])\]
+\end{safebindlemma}
+
+The property \ref{lem:safebind} states that to show that $\ectx[\expr]$ is safe, it suffices to show that $\ectx[\val]$ is safe where $\val$ is the value obtained from executing $\expr$.
+This also elucidates the fact that the execution of $\ectx[\expr]$ must necessarily first execute $\expr$, and only when it has evaluated to a value $\val$ continue with execution of $\ectx[\val]$.
+
+\begin{safesteplemma}
+  \makeatletter\def\@currentlabel{Safe-Step}\makeatother
+  \label{lem:safestep}
+  Let $\expr$ and $\expr'$ be two expressions and $\pred$ be a predicate on values. We have the following:
+  \[\expr \step \expr' \land \Safe{\pred}(\expr') \implies \Safe{\pred}(\expr) \]
+\end{safesteplemma}
+
+Note the order of things in \ref{lem:safestep} above.
+Whenever $\expr \step \expr'$, $\Safe{\pred}(\expr')$ implies $\Safe{\pred}(\expr)$.
+This means that for instance if we have to show $\Safe{\pred}((\lambda \var.\; \expr)~\val)$ it suffices to show $\Safe{\pred}(\expr[\val/\var])$.
+The proof of this theorem essentially relies on the fact that the operational semantics of our programming language is deterministic.
+That is, when $\expr \step \expr'$ we have that $\expr'$ is the only possible expression that $\expr$ evaluates to in one step.
 
 \section{Logical Relations}
 We define the predicates associated with types in two stages.
@@ -247,7 +288,7 @@ predicates.
 \semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
 \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
 \semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr\land
-\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
+\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
 \semtyp{\semenv}{\CtxTps}{\TForall \tvar.~\typ}(\var) \defeq{}& \exists \expr, \val = \TLam~\expr\land
 \forall \typ'.~\semErel{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\expr) \hspace{1em} {\color{red}(incorrect)}
 \end{align*}
@@ -282,34 +323,76 @@ The new logical relations for system F is defined as follows:
 \semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
 \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
 \semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr \land
-\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
+\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val'/\var])\\
 \semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\val) \defeq{}& \exists \expr, \val = \TLam~\expr\land
-\forall P \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto P]\semenv}{\tvar, \CtxTps}{\typ}}(\expr)
+\forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}}(\expr)
 \end{align*}
 
 \paragraph{Note:} Note that we are implicitly assuming that the domain of the partial mapping $\semenv$ in $\semtyp{\semenv}{\CtxTps}{\typ}$ is always $\CtxTps$.
 
-The value and expression relations above are defined over closed programs, \ie{}, programs where no free (term) variables appear.
-We extend the defined relations by substituting values in the logical relations for free variables.\footnote{For more details see my notes on logical relations for safety of simply-typed lambda calculus.}
+Before we proceed, we state two important properties of our logical relations.
+
+The following lemma states that as far as the logical relation is concerned substitution of a type $\typ'$ in a type $\typ$ is equivalent to associating its corresponding logical relation to the corresponding free type variable in the mapping that interprets free type variables.
+\newtheorem*{logrelsubst}{LogRel-Subst}
+\begin{logrelsubst}
+  \makeatletter\def\@currentlabel{LogRel-Subst}\makeatother
+  \label{lem:logrelsubst}
+  The following holds for any $\semenv$, $\CtxTps$, $\val$, $\typ$, $\typ'$, $\tvar$:
+  \[ \semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}(\val) \iff \semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\CtxTps}{\typ}(\val) \]
+\end{logrelsubst}
+\begin{proof}
+Straightforward induction on structure of type $\typ$.
+\end{proof}
+
+The following lemma states that, perhaps obviously, the relation for a type $\typ$ where $\tvar$ does not appear freely does not depend on the predicate associated with $\tvar$ in the mapping that interprets free type variables.
+\newtheorem*{logrelweaken}{LogRel-Weaken}
+\begin{logrelweaken}
+  \makeatletter\def\@currentlabel{LogRel-Weaken}\makeatother
+  \label{lem:logrelweaken}
+  The following holds for any $\pred$ $\semenv$, $\CtxTps$, $\val$, $\typ$, and any $\tvar$ the \textbf{does not} appear freely in $\typ$:
+  \[ \semtyp{\semenv}{\CtxTps}{\typ}(\val) \iff \semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}(\val) \]
+\end{logrelweaken}
+\begin{proof}
+Straightforward induction on structure of type $\typ$.
+\end{proof}
+
+The logical relations above are defined over closed terms, \ie{}, programs where no free (term) variables appear.
+We extend the defined relations to open terms by substituting for the free variables values in the logical relations for the appropriate type.\footnote{It is an interesting exercise to work out what goes wrong if we do not extend the relation to open terms. That is, if we only have a relation on closed terms. After all, the type safety theorem regards only closed terms. \emph{Hint: check the induction hypothesis we obtain for the case of \ruleref{T-Lam}.} }
 For this purpose we define when a sequence of values $\mathit{vs}$ is in the corresponding predicates for the types in a context $\Tctx$, written as $\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})$.
 
-\paragraph{The relation on sequences of terms}
+\paragraph{The relation on sequences of values}
 A sequence of terms $\mathit{vs} = \val_1, \dots,\val_n$ is said to be in the predicates for a context $\Tctx = \var_1 : \typ_1,\dots, \var_n : \typ_n$ under the context of type variables $\CtxTps$ (with interpretation $\semenv$), written as $\semtyp{\semenv}{\CtxTps}{\Tctx}(vs)$ if
 \begin{align*}
 \semtyp{\semenv}{\CtxTps}{\cdot}(\mathit{vs}) \defeq{}& |\mathit{vs}| = 0\\
 \semtyp{\semenv}{\CtxTps}{\var : \typ, \Tctx}(\mathit{vs}) \defeq{}& \exists \val, \mathit{vs'}.\; \mathit{vs} = \val, \mathit{vs'} \land \semtyp{\semenv}{\CtxTps}{\typ}(\val) \land \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs'})
 \end{align*}
 
+The following lemma simply extends lemma \ref{lem:logrelweaken} to the relation on sequences of values.
+\newtheorem*{logrelseqweaken}{LogRel-Seq-Weaken}
+\begin{logrelseqweaken}
+  \makeatletter\def\@currentlabel{LogRel-Seq-Weaken}\makeatother
+  \label{lem:logrelseqweaken}
+  The following holds for any $\pred$ $\semenv$, $\CtxTps$, $\mathit{vs}$, $\Tctx$, and any $\tvar$ the \textbf{does not} appear freely in $\Tctx$:
+  \[ \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \iff \semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs}) \]
+\end{logrelseqweaken}
+\begin{proof}
+A simple consequence of \ref{lem:logrelweaken} which follows by a simple induction on the length of $\Tctx$
+\end{proof}
+
 \paragraph{Attempt 2:} In this final attempt we prove the following theorem, known as the fundamental theorem (or fundamental lemma) of logical relations.
 
-\begin{theorem}[Fundamental theorem of logical relations]
+\newtheorem*{fundamentaltheorem}{Fundamental Theorem}
+
+\begin{fundamentaltheorem}[of logical relations]
+  \makeatletter\def\@currentlabel{Fundamental Theorem}\makeatother
+  \label{thm:fundamental}
 For any $e$, $\CtxTps$, $\Tctx$ and $\typ$ such that $\typed{\CtxTps}{\Tctx}{\expr}{\typ}$ we have:
 \[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
 \semErel{\semtyp{\semenv}{\CtxTps}{\typ}}(\expr[\mathit{vs}/\mathit{xs}])
 \]
 where $\mathit{xs}$ is the sequence of variables of $\Tctx$ and $\expr[\mathit{vs}/\mathit{xs}]$ is a shorthand for $\expr[\val_1, \dots, \val_n/\var_1, \dots, \var_n]$ which is the term $\expr$ where $\var_i$'s are substituted with $\val_i$'s simultaneously.
-\end{theorem}
+\end{fundamentaltheorem}
 
 \begin{proof}
 By induction on the derivation of $\typed{\CtxTps}{\Tctx}{\expr}{\typ}$.
@@ -317,249 +400,373 @@ Here we prove the cases \textsc{App}, \textsc{TApp},
 \textsc{Lam} and \textsc{TLam}.
 We leave the rest of the cases as an easy exercise.
 
-\paragraph{Case \textsc{App}:}
+\paragraph{Case \ruleref{T-App}:}
 Let us consider the case of \ruleref{T-App} which was problematic in the first attempt.
 We need to show that
-\footnote{Note that
-$(\expr~\expr')[\mathit{vs}/\mathit{xs}] = \expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}]$.}
-\[
-\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
-\semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}])
-\]
-knowing that both (induction hypotheses)
-\[\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semErel{\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}}(\expr[\mathit{vs}/\mathit{xs}])
-\]
+\begin{align}
+  \label{eq:fund-app-main}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}])
+\end{align}
+holds knowing that both induction hypotheses
+\begin{align}
+  \label{eq:fund-app-ih1}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}}(\expr[\mathit{vs}/\mathit{xs}])
+\end{align}
 and
-\[
-\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow
-\semErel{\semtyp{\semenv}{\CtxTps}{\typ_1}}(\expr'[\mathit{vs}/\mathit{xs}])
-\]
+\begin{align}
+  \label{eq:fund-app-ih2}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ_1}}(\expr'[\mathit{vs}/\mathit{xs}])
+\end{align}
 hold.
 For the rest of this case, we assume some arbitrary but fixed $\semenv$ and $\mathit{vs}$.
-We, in addition, write $f$ for $\expr[\mathit{vs}/\mathit{xs}]$
-and $f'$ for $e'[\mathit{vs}/\mathit{xs}]$.
+We need to show that
+\begin{align}
+  \label{eq:fund-app-to-show-1}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}]~\expr'[\mathit{vs}/\mathit{xs}])
+\end{align}
+Since $\empectx~\expr'[\mathit{vs}/\mathit{xs}]$ is an evaluation context, we can apply \ref{lem:safebind} after which we need to show that
+\begin{align}
+  \label{eq:fund-app-to-show-2}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\val~\expr'[\mathit{vs}/\mathit{xs}])
+\end{align}
+for a value $\val$ for which we have $\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val)$ (due to \eqref{eq:fund-app-ih1} above).
+The latter implies that $\val = \lambda \var.\; \exprB$ for some expression $\exprB$ for which we have
+\begin{align}
+  \label{eq:fund-app-lam-body}
+  \forall \valB.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\valB) \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\exprB[\valB/\var])
+\end{align}
+Now, to show that \eqref{eq:fund-app-to-show-2} holds, we can apply the \ref{lem:safebind} again, this time with the evaluation context $\val~\empectx$.
+This leaves us to show
+\begin{align}
+  \label{eq:fund-app-to-show-3}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ_2}}((\lambda \var.\; \exprB)~\valB)
+\end{align}
+for a value $\valB$ for which we have
+\begin{align}
+  \label{eq:fund-app-func-arg}
+  \semtyp{\semenv}{\CtxTps}{\typ_1}(\valB)
+\end{align}
+(due to \eqref{eq:fund-app-ih2} above).
+To show \eqref{eq:fund-app-to-show-3} above, by \ref{lem:safestep}, it suffices to show
+\begin{align}
+  \label{eq:fund-app-to-show-4}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\exprB[\valB/\var])
+\end{align}
+Which just follows by \eqref{eq:fund-app-lam-body} as we have \eqref{eq:fund-app-func-arg}.
 
-We know that either \textbf{(case 1)} $f~f' \steps f''~f'$ if $f \steps f''$
-or \textbf{(case 2)} to $f~f' \steps f~f''$ if $\expr$ is already a value and $f' \steps f''$.
+\paragraph{Case \ruleref{T-Lam}:}
+We need to show that
+\begin{align}
+  \label{eq:fund-lam-main}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}}(\lambda \var.\; \expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+holds knowing that the following induction hypothesis holds:
+\begin{align}
+  \label{eq:fund-lam-ih}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\var : \typ_1, \Tctx}(\mathit{vs}) \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+That is, we need to show
+\begin{align}
+  \label{eq:fund-lam-to-show-1}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}}(\lambda \var.\; \expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+For a sequence of values $\mathit{vs}$ for which we have
+\begin{align}
+  \label{eq:fund-lam-env-rel}
+  \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})
+\end{align}
+Since the term $\lambda \var.\; \expr[\mathit{vs}/\mathit{xs}]$ is already a value, by \ref{lem:safeval}, we only need to show
+\begin{align}
+  \label{eq:fund-lam-to-show-2}
+  \semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\lambda \var.\; \expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+After unfolding the logical relations, and some minor simplifications, we need to show that
+\begin{align}
+  \label{eq:fund-lam-to-show-3}
+  \forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}][\val'/\var])
+\end{align}
+We proceed by introducing the universal quantifier and the implication in \eqref{eq:fund-lam-to-show-3} above.
+Therefore, it remains to show
+\begin{align}
+  \label{eq:fund-lam-to-show-4}
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\mathit{vs}/\mathit{xs}][\val/\var])
+\end{align}
+for some value $\val'$ for which we have
+\begin{align}
+  \label{eq:fund-lam-applied-arg}
+  \semtyp{\semenv}{\CtxTps}{\typ_1}(\val')
+\end{align}
+Now, putting \eqref{eq:fund-lam-applied-arg} and \eqref{eq:fund-lam-env-rel} together we obtain
+\begin{align}
+  \label{eq:fund-lam-extended-env-rel}
+  \semtyp{\semenv}{\CtxTps}{\var : \typ_1,\Tctx}(\val, \mathit{vs})
+\end{align}
+Subsequently, by applying \eqref{eq:fund-lam-ih} to \eqref{eq:fund-lam-extended-env-rel} we obtain
+\begin{align}
+  \label{eq:fund-lam-ih-consequence}
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val', \mathit{vs}/\var, \mathit{xs}])
+\end{align}
+Which is the same as \eqref{eq:fund-lam-to-show-4} above we had to prove.
 
-Let us consider \textbf{(case 1)}.
-In \textbf{(case 1)}, safety of $\exprB$ implies that $\exprB''$ is either \textbf{(case 1.1)} a value (this case is analogous to \textbf{(case 2)} above) or \textbf{(case 1.2)} there exists an $\exprB_2$ such that $\exprB'' \step \exprB_2$. In \textbf{(case 1.2)}, we have $\exprB''~\exprB' \step \exprB_2~\exprB'$ which proves
-the right hand side case of the disjunction in $\mathbf{Safe}_{\semtyp{\semenv\EXP}{\CtxTps}{\typ_2}}(\exprB~\exprB')$.
+\paragraph{Case \ruleref{T-TApp}:}
+We need to show that
+\begin{align}
+  \label{eq:fund-tapp-main}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+  \semErel{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\expr[\mathit{vs}/\mathit{xs}]~\TArg)
+\end{align}
+holds knowing that the following induction hypothesis holds:
+\begin{align}
+  \label{eq:fund-tapp-ih}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies \semErel{\semtyp{\semenv}{\CtxTps}{\TForall \tvar.\; \typ}}(\expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+That is, we need to show
+\begin{align}
+  \label{eq:fund-tapp-to-show-1}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\expr[\mathit{vs}/\mathit{xs}]~\TArg)
+\end{align}
+For a sequence of values $\mathit{vs}$ for which we have
+\begin{align}
+  \label{eq:fund-tapp-env-rel}
+  \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})
+\end{align}
+Since $\ectx~\TArg$ is an evaluation context we apply \ref{lem:safebind} with $\ectx$ being this evaluation context.
+Hence, we have to show
+\begin{align}
+  \label{eq:fund-tapp-to-show-2}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\val~\TArg)
+\end{align}
+for some value $\val$ for which we know $\val = \TLam\; \exprB$ such that
+\begin{align}
+  \label{eq:fund-tapp-the-poly-term}
+  \forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}}(\exprB)
+\end{align}
+Now, we apply \ref{lem:safestep} to \eqref{eq:fund-tapp-to-show-2} which leaves us to show
+\begin{align}
+  \label{eq:fund-tapp-to-show-3}
+  \Safe{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\exprB)
+\end{align}
+This, however, due to the equivalence \ref{lem:logrelsubst} and \ref{lem:safemono}, is a simple consequence of \eqref{eq:fund-tapp-the-poly-term} by taking $\pred$ to be $\semtyp{\semenv}{\CtxTps}{\typ'}$.
 
-Now, let us consider \textbf{(case 2)} (and \textbf{(case 1.1)} by analogy). In this case, $\exprB$ is
-a value and therefore we have $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}(\exprB)$ and thus $\exprB = \lambda \var.~\exprB_1$.
-In this case, $\exprB~\exprB' \steps \exprB~\exprB''$ if $\exprB \steps \exprB''$. Safety of $\exprB'$ now implies that
-either $\exprB''$ is a value \textbf{(case 2.1)} or \textbf{(case 2.2)}there is an $\exprB_2$ such that
-$\exprB'' \step \exprB_2$.
-In \textbf{(case 2.1)} we need to show that $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}((\lambda \var.~\exprB_1)~\exprB'')$ where $\exprB''$ is a value. This simply follows from the fact that $(\lambda \var.~\exprB_1)~\exprB'' \step \exprB_1[\exprB''/\var]$ and the definition of $\semtyp{\semenv\EXP}{\CtxTps}{\typ_1 \to \typ_2}$.
-In \textbf{(case 2.2)}, we have $\exprB'' \step \exprB_2$ and therefore $\exprB~\exprB'' \step \exprB~\exprB_2$ which
-proves the right hand disjunct of $\mathbf{Safe}_{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\exprB~\exprB')$.
+\paragraph{Case \ruleref{T-TLam}:}
+We need to show that
+\begin{align}
+  \label{eq:fund-tlam-main}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+  \semErel{\semtyp{\semenv}{\CtxTps}{\TForall \tvar.\; \typ}}(\TLam\; \expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+holds knowing that the following induction hypothesis holds:
+\begin{align}
+  \label{eq:fund-tlam-ih}
+  \forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs}) \implies \semErel{\semtyp{\semenv}{\tvar, \CtxTps}{\typ}}(\expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+Furthermore, we know that $\tvar$ does not appear freely in $\Tctx$.
+Since $\TLam\; \expr[\mathit{vs}/\mathit{xs}]$ is already a value, by \ref{lem:safeval}, we only need to show
+\begin{align}
+  \label{eq:fund-to-show-1}
+  \semtyp{\semenv}{\CtxTps}{\TForall \tvar.\; \typ}(\TLam\; \expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+For some a sequence of values $\mathit{vs}$ for which we have
+\begin{align}
+  \label{eq:fund-tapp-env-rel}
+  \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})
+\end{align}
+After unfolding the logical relations, and some minor simplifications, we need to show that
+\begin{align}
+  \label{eq:fund-lam-to-show-2}
+  \semErel{\semtyp{[\tvar \mapsto P]\semenv}{\tvar, \CtxTps}{\typ}}(\expr[\mathit{vs}/\mathit{xs}])
+\end{align}
+for an arbitrary predicate $\pred \in 2^{\VAL}$ on values.
+Now, by \eqref{eq:fund-tlam-ih}, we only need to show
+\begin{align}
+  \label{eq:fund-tapp-to-show-3}
+  \semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs})
+\end{align}
+which by  \ref{lem:logrelseqweaken} is exactly equivalent to \eqref{eq:fund-tapp-env-rel} above.
+\end{proof}
 
-\paragraph{Case \textsc{TApp}:}
-For \textsc{TApp}, we know that
-\[
-\forall \semenv, \mathit{vs}.~\semtyp{\semenv\EXP}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])
-\]
-and we have to show that
-\[
-\forall \semenv, \mathit{vs}, \typ'.~\semtyp{\semenv\EXP}{\CtxTps}{\typ[\typ'/\tvar]}((\exprB~\TArg)[\mathit{vs}/\mathit{xs}])
-\]
-which is equivalent to
-\[
-\forall \semenv, \mathit{vs}, \typ'.~\semtyp{\semenv\EXP}{\CtxTps}{\typ[\typ'/\tvar]}(\expr[\mathit{vs}/\mathit{xs}]~\TArg)
-\]
-In the rest of this case, we assume that we have arbitrary
-but fixed $\semenv$, $\mathit{vs}$ and $\typ'$.
+\newtheorem*{typesafety}{Type Safety}
 
-Here we know that if $\expr[\mathit{vs}/\mathit{xs}]~\TArg \steps \exprB$
-for some $f$, then either $\exprB = \expr'~\TArg$ in which case, we must
-have that $\expr[\mathit{vs}/\mathit{xs}] \steps \expr'$ and then
-either $\expr'$ is a value or it reduces in one more step
-(we know this from $\semtyp{\semenv\EXP}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])$).
-Or, $\expr'$ is a value. This latter case is similar to the case where $e[\mathit{vs}/\mathit{xs}]$ is a value in the first place.
-We prove this case below:
+\begin{typesafety}
+  \makeatletter\def\@currentlabel{Type Safety}\makeatother
+  \label{thm:typesafety}
+  For any expression $\expr$ and type $\typ$ for which $\typed{\cdot}{\cdot}{\expr}{\typ}$ we have
+  \[ \Safe{}(\expr) \]
+\end{typesafety}
 
-In this case, we know that
-\[
-\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\expr[\mathit{vs}/\mathit{xs}])
-\]
-and equivalently
-\[
-\exists \exprB.~\expr[\mathit{vs}/\mathit{xs}] = \TLam~\exprB \land
-\forall P \in 2^{\VAL}.~\mathbf{Safe}{\semtyp{\semenv}{\tvar, \CtxTps}{\typ}
-^{[P/\tvar]\semenv}}(f)
-\]
-Thus, for any term $\expr'$ such that
-$\expr[\mathit{vs}/\mathit{xs}]~\TArg \step \expr'$, we must have
-$\exprB \step \expr'$.
-Now we must show that
-\[
-(\expr' \in \VAL \land
-\semtyp{}{\CtxTps}{\typ[\typ'/\tvar]}(\expr'))
-\lor
-\exists \expr''.~\expr' \step \expr''
-\]
-Notice that this is trivially follows from
-\[
-\mathbf{Safe}{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}
-}(f)
-\equiv
-\mathbf{Safe}{\semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\tvar, \CtxTps}{\typ}}(\exprB)
-\]
-
-\paragraph{Case \textsc{Lam}:}
-Let us consider the case \textsc{Lam}. In this case, we have to show that
-\[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
-\semtyp{\semenv\EXP}{\typ_1 \to \typ_2}((\lambda \var.~\expr)[\mathit{vs}/\mathit{xs}])
-\]
-Since $(\lambda \var.~\expr)$ is already a value, we have to show that:
-\[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
-\semtyp{\semenv}{\typ_1 \to \typ_2}((\lambda \var.~\expr)[\mathit{vs}/\mathit{xs}])
-\]
-and equivalently
-\[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
-\semtyp{}{\typ_1 \to \typ_2}(\lambda \var.~\expr[\mathit{vs}/\mathit{xs}])
-\]
-which is equivalent to 
-\[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\Tctx}(\mathit{vs}) \Rightarrow
-\forall \val.~\semtyp{\semenv}{\typ_1}(\val) \Rightarrow \semtyp{\semenv}{\typ_2}(\expr[\mathit{vs}/\mathit{xs}])[\var/\val]
-\]
-and by induction hypothesis we have
-\[
-\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\var : \typ, \Tctx}(\mathit{vs}) \Rightarrow
-\semtyp{\semenv}{\typ_2}(\expr[\mathit{vs}/\mathit{xs}])
-\]
-It is simple to see that $(e[\mathit{vs}/\mathit{xs}])[\var/\val] = \expr[\val, \mathit{vs}/\var, \mathit{xs}]$
-which concludes the case \textsc{Lam}.
-
-\paragraph{Case \textsc{TLam}:}
-In this case we know that (from induction hypothesis)
-\[
-\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semtyp{\semenv\EXP}
-{\tvar, \CtxTps}{\typ}(\expr[\mathit{vs}/\mathit{xs}])
-\]
-and we have to show that
-\[
-\forall \semenv, \mathit{vs}.~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \Rightarrow \semtyp{\semenv\EXP}
-{\CtxTps}{\forall \tvar.~\typ}(\TLam~\expr[\mathit{vs}/\mathit{xs}])
-\]
-
-For the rest of this case, we assume an arbitrary $\semenv$ (with the domain for $\CtxTps$) and
-some arbitrary but fixed $\mathit{vs}$ for which we know
-$\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs})$.
-
-Notice that $\TLam~\expr[\mathit{vs}/\mathit{xs}]$ is a value,
-thus, we have to show that
-\[
-\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\TLam~\expr[\mathit{vs}/\mathit{xs}])
-\]
-Which (unfolding the definition) means we have to show that
-\[
-\forall P \in 2^{\VAL}~\semtyp{\semenv\EXP}{\tvar, \CtxTps}{\typ}
-^{[\tvar \mapsto  \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}(e[\mathit{vs}/\mathit{xs}])
-\]
-Which follows from the induction hypothesis.
+\begin{proof}
+  By the \ref{thm:fundamental}, since $\typed{\cdot}{\cdot}{\expr}{\typ}$ we have
+  \[ \forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\cdot}{\cdot}(\mathit{vs}) \implies
+    \semErel{\semtyp{\semenv}{\cdot}{\typ}}(\expr[\mathit{vs}/\mathit{xs}]) \]
+  We simply take $\semenv$ to by the empty map and $\mathit{vs}$ to be the empty sequence of values.
+  Consequently, we obtain
+  \[ \semErel{\semtyp{\emptyset}{\cdot}{\typ}}(\expr) \]
+  or, written differently
+  \[ \Safe{\semtyp{\emptyset}{\cdot}{\typ}}(\expr) \]
+  which immediately implies $\Safe{}(\expr)$ as required.
 \end{proof}
 
 \section{Parametericity and theorems for free}
-The theorem that we proved above (the fundamental theorem)
-has a number of interesting consequences.
-It in particular it says that types that we quantify over in our
-language are not just the types that are syntactically
-representable in the language but are in general any set of
-values.
+The \ref{thm:fundamental} that we proved above has a number of interesting consequences other than \ref{thm:typesafety}.
+In particular, it says that the types that we quantify over in our language when we write polymorphic programs are not just the types that are syntactically representable in the type system of the language but are rather any conceivable semantic type, \ie{}, any predicate over values.
+This ingenious idea of Reynolds has deep and very interesting consequences.
+Here, we only see a couple of very simple consequences of this idea which we can obtain even with our rather weak logical relations which merely establishes safety of system F.
 
-One in particular can use this theorem to derive theorems about
-polymorphic programs.
-These theorems are sometimes referred to as free theorems. This is due to the fact that they follow rather easily from the
-fundamental theorem.
-Two such theorems that we proven below.
+One in particular can use this theorem to derive so-called \emph{free theorems} about polymorphic programs.
+This is due to the fact that they follow rather easily from the \ref{thm:fundamental}.
 
-\begin{theorem}
-Any term of type $\forall \tvar.~\tvar \to \tvar$ is the identity function.
+\newtheorem{freetheorem}{Free Theorem}
+
+\begin{freetheorem}[the polymorphic type of the identity function]
+Any term of type $\forall \tvar.~\tvar \to \tvar$ is the identity function. That is,
 \[
-\forall \expr, \expr : \forall \tvar.~\tvar \to \tvar \Rightarrow
-\forall \val \in \VAL.~((\expr~\TArg)~\val) \steps \expr' \Rightarrow
-\expr' \in \VAL \land \expr' = v \lor \exists \expr''.~\expr' \step \expr''
+\forall \expr.\; \typed{\cdot}{\cdot}{\expr}{\forall \tvar.~\tvar \to \tvar} \implies \Safe{\mathit{Eq}_{\val}}((\expr~\TArg)~\val)
 \]
-\end{theorem}
+where
+\[ \mathit{Eq}_{\val}(\valB) \defeq{} \valB = \val \]
+\end{freetheorem}
 
 \begin{proof}
-By the fundamental theorem above we know that
+Let us assume $\typed{\cdot}{\cdot}{\expr}{\forall \tvar.~\tvar \to \tvar}$ for some arbitrary expression $\expr$.
+We need to show
 \begin{align}
-\forall \semenv.~ \semtyp{\semenv\EXP}{\cdot}{\forall \tvar.~\tvar \to \tvar}(\expr)
-\label{TrueSemTyp}
+  \label{eq:poly-id-to-show-1}
+  \Safe{\mathit{Eq}_{\val}}((\expr~\TArg)~\val)
 \end{align}
-On the other hand, if we have $((\expr~\TArg)~\val) \steps \expr'$ we must have
-that $\expr' = ((\exprB~\TArg)~\val)$ for some $\exprB$ or $\expr = \TLam~\exprC$ is a value and
-we have that $(\exprC~\val) \steps \expr'$.
-In the former case, we know that $f$ is either a value (which is analogous to the latter case) or $\exists \exprB'.~\exprB \step \exprB'$ but in that
-case (from Formula~\ref{TrueSemTyp} above) we know that
-$\expr' \step ((\exprB'~\TArg)~\val)$.
-
-In the latter case above (where $e$ is a value), we knwo
-(from Formula~\ref{TrueSemTyp} above) that
-\[
-\exists \exprC.~\expr = \TLam~\exprC \land
-\forall P\in 2^{\VAL}.~\semtyp{\semenv\EXP}{\tvar}{\tvar \to \tvar}^{[\tvar \mapsto P]}(\exprC)
-\]
-In this case, we can take $P = \{v\}$. This means
-\[
-\semtyp{\semenv\EXP}{\tvar}{\tvar \to \tvar}^{[\tvar \mapsto \{v\}]}(\exprC)
-\]
-Let us assume without loss of generality (we have assumed a similar other case) that $\exprC$ is a value in which case we have
-\[
-\exists \exprD.~ \exprC = \lambda \var.~\exprD \land \forall \valB.~ \valB \in \{\val\}
-\Rightarrow \mathbf{Safe}_{\{\val\}}(\exprD[\valB/\var])
-\]
-Therefore
-\[
-(\exprC~v) \equiv ((\lambda \var.~\exprD)~\val) \steps \expr' \Rightarrow
-(\exprD[\val/\var]) \step \expr' \Rightarrow
-\expr' \in \VAL \land \expr' \in \{\val\} \lor \exists \expr''.~\expr' \step \expr''
-\]
+By the \ref{thm:fundamental} we know that
+\begin{align}
+  \label{eq:poly-id-fund}
+\forall \semenv.~ \semErel{\semtyp{\semenv}{\cdot}{\forall \tvar.~\tvar \to \tvar}}(\expr)
+\end{align}
+By taking the empty mapping for $\semenv$ and unfolding the logical relation \ref{eq:poly-id-fund} implies
+\begin{align}
+  \label{eq:poly-id-fund-1}
+  \Safe{\semtyp{\emptyset}{\cdot}{\forall \tvar.~\tvar \to \tvar}}(\expr)
+\end{align}
+By using \eqref{eq:poly-id-fund-1} above and \ref{lem:safebind} (since $(\empectx~\TArg)~\val$ is an evaluation context) it suffices to show
+\begin{align}
+  \label{eq:poly-id-to-show-2}
+  \Safe{\mathit{Eq}_{\val}}((\valB~\TArg)~\val)
+\end{align}
+for some value $\valB = \TLam\; \exprB$ and some $\exprB$ for which we have
+\begin{align}
+  \label{eq:poly-id-fund-2}
+  \forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\emptyset}{\tvar, \cdot}{\tvar \to \tvar}}(\exprB)
+\end{align}
+which can be simplified to
+\begin{align}
+  \label{eq:poly-id-fund-3}
+  \forall \pred \in 2^{\VAL}.~\Safe{\semtyp{[\tvar \mapsto pred]\emptyset}{\tvar, \cdot}{\tvar \to \tvar}}(\exprB)
+\end{align}
+Now, by \ref{lem:safestep} we are left to show that
+\begin{align}
+  \label{eq:poly-id-to-show-3}
+  \Safe{\mathit{Eq}_{\val}}(\exprB~\val)
+\end{align}
+Again, by applying \ref{lem:safebind}, this time together with \eqref{eq:poly-id-fund-3} and taking $\pred$ to be $\mathit{Eq}_{\val}$, we only have to show
+\begin{align}
+  \label{eq:poly-id-to-show-4}
+  \Safe{\mathit{Eq}_{\val}}(\valB~\val)
+\end{align}
+for some value $\valB$ and $\exprC$ such that $\valB = \lambda \var.\; \exprC$ and we have
+\begin{align}
+  \label{eq:poly-id-fund-4}
+  \semtyp{[\tvar \mapsto \mathit{Eq}_{\val}]\emptyset}{\tvar, \cdot}{\tvar \to \tvar}(\valB)
+\end{align}
+or equivalently
+\begin{align}
+  \label{eq:poly-id-fund-5}
+  \forall \valC.~\semtyp{[\tvar \mapsto \mathit{Eq}_{\val}]\emptyset}{\tvar, \cdot}{\tvar}(\valC) \implies \semErel{\semtyp{[\tvar \mapsto \mathit{Eq}_{\val}]\emptyset}{\tvar, \cdot}{\tvar}}(\exprC[\valC/\var])
+\end{align}
+which we can simplify further
+\begin{align}
+  \label{eq:poly-id-fund-6}
+  \forall \valC.~\mathit{Eq}_{\val}(\valC) \implies \semErel{\mathit{Eq}_{\val}}(\exprC[\valC/\var])
+\end{align}
+and still further
+\begin{align}
+  \label{eq:poly-id-fund-7}
+  \forall \valC.~\mathit{Eq}_{\val}(\valC) \implies \Safe{\mathit{Eq}_{\val}}(\exprC[\valC/\var])
+\end{align}
+Now, by \ref{lem:safestep} and the fact $\valB = \lambda \var.\; \exprC$, the following suffices to show \eqref{eq:poly-id-to-show-4}:
+\begin{align}
+  \label{eq:poly-id-to-show-4}
+  \Safe{\mathit{Eq}_{\val}}(\exprC[\valC/\var])
+\end{align}
+which is a simple consequence of \eqref{eq:poly-id-fund-7}.
 \end{proof}
 
-\begin{theorem}
-Any term of type $\forall \tvar.~\tvar$ is divergent.
+\begin{freetheorem}[the empty type]
+Any term of type $\forall \tvar.~\tvar$ must necessarily diverge. That is,
 \[
-\forall e, e : \forall \tvar.~\tvar \Rightarrow
-(\expr~\TArg) \steps \expr' \Rightarrow \exists \expr''.~\expr' \step \expr''
+\forall \expr, \typed{\cdot}{\cdot}{\expr}{\forall \tvar.~\tvar} \implies \Safe{\emptyset}(\expr~\TArg)
 \]
-\end{theorem}
+\end{freetheorem}
 
 \begin{proof}
-By the fundamental theorem above we know that
+Let us assume $\typed{\cdot}{\cdot}{\expr}{\forall \tvar.~\tvar}$ for some arbitrary expression $\expr$.
+We need to show
 \begin{align}
-\forall \semenv.~ \semtyp{\semenv\EXP}{\cdot}{\forall \tvar.~\tvar}(\expr)
-\label{FalseSemTyp}
+  \label{eq:poly-emp-to-show-1}
+  \Safe{\emptyset}(\expr~\TArg)
 \end{align}
-On the other hand, if we have $(\expr~\TArg) \steps \expr'$ we must have
-that $\expr' = (\exprB~\TArg)$ for some $\exprB$ or $\expr = \TLam~\exprC$ is a value and
-we have that $\exprC \steps \expr'$.
-In the former case, we know that $\exprB$ is either a value (which is analogous to the latter case) or $\exists \exprB'.~\exprB \step \exprB'$ but in that
-case (from Formula~\ref{FalseSemTyp} above) we know that
-$\expr' \step (\exprB'~\TArg)$.
-
-In the latter case above (where $\expr$ is a value), we knwo
-(from Formula~\ref{FalseSemTyp} above) that
-\[
-\exists \exprC.~\expr = \TLam~\exprC \land
-\forall P\in 2^{\VAL}.~\semtyp{\semenv\EXP}{\tvar}{\tvar}^{[\tvar \mapsto P]}(\exprC)
-\]
-In this case, we can take $P = \emptyset$. This means
-\[
-\semtyp{\semenv\EXP}{\tvar}{\tvar}^{[\tvar \mapsto \emptyset]}(\exprC)
-\]
-By definition this is equivalent to
-\[
-\mathbf{Safe}_{\emptyset}(\exprC)
-\]
-Which is precisely what we wanted to prove.
+By the \ref{thm:fundamental} we know that
+\begin{align}
+  \label{eq:poly-emp-fund}
+  \forall \semenv.~ \semErel{\semtyp{\semenv}{\cdot}{\forall \tvar.~\tvar}}(\expr)
+\end{align}
+By taking the empty mapping for $\semenv$ and unfolding the logical relation \ref{eq:poly-emp-fund} implies
+\begin{align}
+  \label{eq:poly-emp-fund-1}
+  \Safe{\semtyp{\emptyset}{\cdot}{\forall \tvar.~\tvar}}(\expr)
+\end{align}
+By using \eqref{eq:poly-emp-fund-1} above and \ref{lem:safebind} (since $\empectx~\TArg$ is an evaluation context) it suffices to show
+\begin{align}
+  \label{eq:poly-emp-to-show-2}
+  \Safe{\emptyset}(\valB~\TArg)
+\end{align}
+for some value $\valB$ and $\exprB$ such that $\valB = \TLam\; \exprB$ and we have
+\begin{align}
+  \label{eq:poly-emp-fund-2}
+  \forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\emptyset}{\tvar, \cdot}{\tvar}}(\exprB)
+\end{align}
+which can be simplified to
+\begin{align}
+  \label{eq:poly-emp-fund-3}
+  \forall \pred \in 2^{\VAL}.~\Safe{\semtyp{[\tvar \mapsto \pred]\emptyset}{\tvar, \cdot}{\tvar}}(\exprB)
+\end{align}
+and still further simplified to
+\begin{align}
+  \label{eq:poly-emp-fund-4}
+  \forall \pred \in 2^{\VAL}.~\Safe{\pred}(\exprB)
+\end{align}
+Now, by \ref{lem:safestep} we are left to show that
+\begin{align}
+  \label{eq:poly-id-to-show-3}
+  \Safe{\emptyset}(\exprB)
+\end{align}
+which is a simple consequence of \eqref{eq:poly-emp-fund-4} when we take $\pred$ to be $\emptyset$.
 \end{proof}
+
+\section{Normalization of system F}
+\label{sec:norm-syst-f}
+
+\newcommand{\Normalizes}[1]{\mathbf{Normalizes}_{#1}}
+
+We can define the normalization property as follows:
+\begin{align*}
+  \Normalizes{}(\expr) \defeq{} \exists \val.\; \expr \steps \val
+\end{align*}
+Corresponding to normalization, we can define parameterized normalization predicate as follows:
+\begin{align*}
+  \Normalizes{\pred}(\expr) \defeq{} \exists \val.\; \expr \steps \val \land \pred(\val)
+\end{align*}
+It is straightforward, or at least very analogous, to show counterparts of \ref{lem:safemono}, \ref{lem:safeval}, \ref{lem:safebind}, and \ref{lem:safestep} for the parameterized normalization predicate.
+Hence, we can set up logical relations analogous to those for type safety above where we replace $\Safe{\pred}$ by $\Normalizes{\pred}$.
+In fact, the proof of the fundamental theorem for these logical relations will also be entirely analogous to our proof above.
+As a result, one would obtain a normalization theorem which states that any closed well-typed program normalizes to a value.
 
 \end{document}
