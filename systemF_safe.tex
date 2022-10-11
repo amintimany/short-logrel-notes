@@ -226,12 +226,12 @@ The parameterized safety predicate satisfies the following interesting propertie
 \newtheorem*{safesteplemma}{Safe-Step}
 \newtheorem*{safemonolemma}{Safe-Mono}
 
-\begin{safevallemma}
+\begin{safemonolemma}
   \makeatletter\def\@currentlabel{Safe-Mono}\makeatother
   \label{lem:safemono}
   Let $\expr$ be an expression and $\pred$ and $\predB$ be two predicate on values, we have
   \[(\forall \val.\; \pred(\val) \implies \predB(\val)) \implies \Safe{\pred}(\expr) \implies \Safe{\predB}(\expr)\]
-\end{safevallemma}
+\end{safemonolemma}
 
 
 \begin{safevallemma}
@@ -246,13 +246,11 @@ The parameterized safety predicate satisfies the following interesting propertie
   \label{lem:safebind}
   Let $\ectx$ be an evaluation context, $\expr$ be an expression, and $\pred$ be a predicate on values.
   The following holds:
-  \[\Safe{\pred_{\ectx}}(\expr) \implies \Safe{\pred}(\ectx[\expr])\]
-  where
-  \[\pred_{\ectx}(\val) \defeq{} \Safe{\pred}(\ectx[\val])\]
+  \[\Safe{\predB}(\expr) \land (\forall \val.\; \predB(\val) \implies \Safe{\pred}(\ectx[\val])) \implies \Safe{\pred}(\ectx[\expr])\]
 \end{safebindlemma}
 
 The property \ref{lem:safebind} states that to show that $\ectx[\expr]$ is safe, it suffices to show that $\ectx[\val]$ is safe where $\val$ is the value obtained from executing $\expr$.
-This also elucidates the fact that the execution of $\ectx[\expr]$ must necessarily first execute $\expr$, and only when it has evaluated to a value $\val$ continue with execution of $\ectx[\val]$.
+This crucially relies on the fact that any execution of $\ectx[\expr]$ must necessarily first execute $\expr$, and only when it has evaluated to a value $\val$ continue with execution of $\ectx[\val]$.
 
 \begin{safesteplemma}
   \makeatletter\def\@currentlabel{Safe-Step}\makeatother
@@ -764,9 +762,9 @@ Corresponding to normalization, we can define parameterized normalization predic
 \begin{align*}
   \Normalizes{\pred}(\expr) \defeq{} \exists \val.\; \expr \steps \val \land \pred(\val)
 \end{align*}
-It is straightforward, or at least very analogous, to show counterparts of \ref{lem:safemono}, \ref{lem:safeval}, \ref{lem:safebind}, and \ref{lem:safestep} for the parameterized normalization predicate.
+It is not too difficult to show counterparts of \ref{lem:safemono}, \ref{lem:safeval}, \ref{lem:safebind}, and \ref{lem:safestep} for the parameterized normalization predicate.
 Hence, we can set up logical relations analogous to those for type safety above where we replace $\Safe{\pred}$ by $\Normalizes{\pred}$.
-In fact, the proof of the fundamental theorem for these logical relations will also be entirely analogous to our proof above.
-As a result, one would obtain a normalization theorem which states that any closed well-typed program normalizes to a value.
+In fact, the proof of the fundamental theorem for these logical relations will also be entirely analogous to our proof of \ref{thm:fundamental} above.
+As a result, similarly to the \ref{thm:typesafety} theorem above, we obtain a normalization theorem which would state that any closed well-typed program normalizes to a value.
 
 \end{document}
