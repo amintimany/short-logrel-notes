@@ -283,11 +283,11 @@ predicates.
 \begin{align*}
 \semtyp{\semenv}{\CtxTps}{\tvar} \defeq{}& \semenv(\tvar)\\
 \semtyp{\semenv}{\CtxTps}{\UNT}(\val) \defeq{}& \val = \TT\\
-\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
+\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.\; \val = (\val_1, \val_2) \land
 \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
-\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr\land
+\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \var, \expr.\; \val = \lambda \var.~\expr\land
 \forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val/\var])\\
-\semtyp{\semenv}{\CtxTps}{\TForall \tvar.~\typ}(\var) \defeq{}& \exists \expr, \val = \TLam~\expr\land
+\semtyp{\semenv}{\CtxTps}{\TForall \tvar.~\typ}(\var) \defeq{}& \exists \expr.\; \val = \TLam~\expr\land
 \forall \typ'.~\semErel{\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}}(\expr) \hspace{1em} {\color{red}(incorrect)}
 \end{align*}
 where $[\tvar \mapsto P]\semenv$ is extending the mapping $\semenv$ by additionally associating $\tvar$ to $P$.
@@ -318,11 +318,11 @@ The new logical relations for system F is defined as follows:
 \begin{align*}
 \semtyp{\semenv}{\CtxTps}{\tvar} \defeq{}& \semenv(\tvar)\\
 \semtyp{\semenv}{\CtxTps}{\UNT}(\val) \defeq{}& v = \TT\\
-\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.~\val = (\val_1, \val_2) \land
+\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.\; \val = (\val_1, \val_2) \land
 \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
-\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \expr, \val = \lambda \var.~\expr \land
+\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \var, \expr.\; \val = \lambda \var.\; \expr \land
 \forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val'/\var])\\
-\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\val) \defeq{}& \exists \expr, \val = \TLam~\expr\land
+\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\val) \defeq{}& \exists \expr.\; \val = \TLam~\expr\land
 \forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}}(\expr)
 \end{align*}
 
@@ -336,7 +336,7 @@ The following lemma states that as far as the logical relation is concerned subs
   \makeatletter\def\@currentlabel{LogRel-Subst}\makeatother
   \label{lem:logrelsubst}
   The following holds for any $\semenv$, $\CtxTps$, $\val$, $\typ$, $\typ'$, $\tvar$:
-  \[ \semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}(\val) \iff \semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\CtxTps}{\typ}(\val) \]
+  \[ \semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}(\val) \iff \semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\tvar, \CtxTps}{\typ}(\val) \]
 \end{logrelsubst}
 \begin{proof}
 Straightforward induction on structure of type $\typ$.
