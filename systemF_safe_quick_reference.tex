@@ -1,0 +1,223 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{newcent}
+\usepackage{geometry}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{stmaryrd}
+\usepackage{amsthm}
+\usepackage[dvinames]{xcolor}
+\usepackage{mathpartir}
+\usepackage{pftools}
+\usepackage[colorlinks]{hyperref}
+\usepackage{microtype}
+
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\eg}{\textit{e.g.}}
+
+\newcommand{\gor}{~|~}
+\newcommand{\fst}{\mathit{fst}}
+\newcommand{\snd}{\mathit{snd}}
+\newcommand{\TT}{\mathit{tt}}
+\newcommand{\VAR}{\mathsf{Var}}
+\newcommand{\EXP}{\mathsf{E}}
+\newcommand{\VAL}{\mathsf{Val}}
+\newcommand{\TYP}{\mathsf{Typ}}
+\newcommand{\UNT}{()}
+\newcommand{\TCTX}{\mathsf{TCtx}}
+\newcommand{\ECTX}{\mathsf{ECtx}}
+\newcommand{\ectx}{\mathbf{K}}
+\newcommand{\empectx}{[]}
+\newcommand{\defeq}{\overset{\Delta}{=}}
+\newcommand{\pred}{P}
+\newcommand{\predB}{Q}
+\newcommand{\semtyp}[3]{\left\llbracket #2 \vdash #3 \right\rrbracket_{#1}}
+\newcommand{\semErel}[1]{#1^{\textbf{E}}}
+\newcommand{\semenv}{\xi}
+\newcommand{\TVAR}{\mathsf{TVar}}
+\newcommand{\TArg}{\_}
+\newcommand{\TLam}{\Lambda}
+\newcommand{\Tctx}{\Gamma}
+\newcommand{\CtxTps}{\Delta}
+\newcommand{\expr}{e}
+\newcommand{\exprB}{f}
+\newcommand{\exprC}{g}
+\newcommand{\exprD}{h}
+\newcommand{\val}{v}
+\newcommand{\valB}{w}
+\newcommand{\valC}{u}
+\newcommand{\var}{x}
+\newcommand{\varB}{y}
+\newcommand{\varC}{z}
+\newcommand{\typ}{\tau}
+\newcommand{\TForall}{\forall}
+\newcommand{\tvar}{\alpha}
+\newcommand{\tvarB}{\delta}
+\newcommand{\tvarC}{\zeta}
+\newcommand{\typed}[4]{#1; #2 \vdash #3 : #4}
+% \newcommand{\semtyped}{4}
+\newcommand{\hstep}{\leadsto_h}
+\newcommand{\step}{\leadsto}
+\newcommand{\steps}{\leadsto^*}
+\newcommand{\Safe}[1]{\textbf{Safe}_{#1}}
+
+
+\title{Logical relations: safety of system F (Quick Reference)}
+\author{Amin Timany}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% \paragraph{Note:} in these notes, we simply ignore the issues
+% regarding the clash between variable names, e.g., capturing, by
+% assuming that bound variables are renamed whenever necessary
+% to avoid such problems.
+
+\subsection*{Syntax}
+\begin{align*}
+\textit{variables} (\VAR) \hspace{1em} \phantom{\var ::={}}& \var, \varB, \varC, \dots\\
+\textit{expressions} (\EXP) \hspace{1em} \expr ::={}& \var \gor \TT \gor (\expr, \expr)
+\gor \fst~\expr \gor \snd~\expr \gor \lambda \var.~\expr \gor \expr~\expr
+\gor \TLam~\expr \gor \expr~\TArg\\
+\textit{values} (\VAL) \hspace{1em} \val ::={}& \TT \gor (\val, \val) \gor \lambda \var.~\expr
+\gor \TLam~\expr
+\end{align*}
+\subsection*{Types and typing}
+\begin{align*}
+\textit{type variables} (\TVAR) \hspace{1em} \phantom{\expr ::={}} & \tvar, \tvarB, \tvarC, \dots\\
+\textit{types} (\TYP) \hspace{1em} \typ ::={}& \tvar \gor \UNT \gor \typ \times\typ
+\gor \typ \to \typ \gor \TForall \tvar.~\typ\\
+\textit{typing context}~(\TCTX)\hspace{1em} \Tctx ::={}& \cdot \gor x : \typ, \Tctx\\
+\textit{context of typing variables}~(\TCTX)\hspace{1em} \CtxTps ::={}& \cdot \gor \tvar, \CtxTps
+\end{align*}
+\begin{mathparpagebreakable}
+  \inferH{T-Unit}{}{\typed{\CtxTps}{\Tctx}{\TT}{\UNT}}
+  \and
+  \inferH{T-Var}{\var : \typ \in \Tctx}{\typed{\CtxTps}{\Tctx}{\var}{\typ}}
+  \and
+  \inferH{T-Prod}{\typed{\CtxTps}{\Tctx}{\expr_1}{\typ_1} \and \typed{\CtxTps}{\Tctx}{\expr_2}{\typ_2}}{\typed{\CtxTps}{\Tctx}{(\expr_1, \expr_2)}{\typ_1 \times \typ_2}}
+  \and
+  \inferH{T-Fst}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \times \typ_2}}{\typed{\CtxTps}{\Tctx}{\fst~\expr}{\typ_1}}
+  \and
+  \inferH{T-Snd}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \times \typ_2}}{\typed{\CtxTps}{\Tctx}{\snd~\expr}{\typ_2}}
+  \and
+  \inferH{T-Lam}{\typed{\CtxTps}{\var : \typ_1, \Tctx}{\expr}{\typ_2}}{\typed{\CtxTps}{\Tctx}{\lambda x.~\expr}{\typ_1 \to \typ_2}}
+  \and
+  \inferH{T-App}{\typed{\CtxTps}{\Tctx}{\expr}{\typ_1 \to \typ_2} \and \typed{\CtxTps}{\Tctx}{\expr'}{\typ_1}}{\typed{\CtxTps}{\Tctx}{\expr~\expr'}{\typ_2}}
+  \and
+  \inferH{T-TLam}{\typed{\tvar, \CtxTps}{\Tctx}{\expr}{\typ} \and \tvar ~\text{ does not appear freely in }~ \Tctx}{\typed{\CtxTps}{\Tctx}{\TLam\; e}{\TForall \tvar.~\typ}}
+  \and
+  \inferH{T-TApp}{\typed{\CtxTps}{\Tctx}{\expr}{\TForall \tvar.~\typ}}{\typed{\CtxTps}{\Tctx}{\expr~\TArg}{\typ[\typ'/\tvar]}}
+\end{mathparpagebreakable}
+
+\subsection*{Operational semantics (CBV)}
+\begin{align*}
+\fst~(\val_1, \val_2) \hstep \val_1 \hspace{2em}
+\snd~(\val_1, \val_2) \hstep \val_2 \hspace{2em}
+(\lambda x.~\expr)~\val \hstep \expr[\val/\var] \hspace{2em}
+(\TLam~e)~\TArg \hstep \expr
+\end{align*}
+\begin{mathpar}
+  \inferrule{\expr \hstep \expr'}{\ectx[\expr] \step \ectx[\expr']}{}
+\end{mathpar}
+\begin{align*}
+\textit{evaluation contexts}~ (\ECTX) \hspace{1em} \ectx ::={} \empectx
+\gor \fst~\ectx \gor \snd~\ectx \gor (\ectx, \expr) \gor (\val, \ectx)
+\gor \ectx~\expr \gor \val~\ectx \gor \ectx~\TArg
+\end{align*}
+\subsection*{Type safety}
+\[
+\forall \expr, \typ.\; \typed{\cdot}{\cdot}{\expr}{\typ} \implies \mathbf{Safe}(\expr)
+\]
+where
+\[
+\mathbf{Safe}(\expr) \defeq \forall \expr'.~ \expr \steps \expr'
+\implies \expr' \in \VAL \lor \exists \expr''.~\expr\step \expr''
+\]
+\subsection*{Parameterized Safety}
+\label{sec:safety}
+\begin{align*}
+  \Safe{\pred}(\expr) \defeq{}& \forall \expr'.~ \expr \steps \expr' \implies (\expr' \in \VAL \land P(\expr')) \lor \exists \expr''.~\expr \step \expr''
+\end{align*}
+Parameterized safety implies safety: $\Safe{\pred}(\expr) \implies \Safe{}(\expr)$
+
+\newtheorem*{safevallemma}{Safe-Val}
+\newtheorem*{safebindlemma}{Safe-Bind}
+\newtheorem*{safesteplemma}{Safe-Step}
+\newtheorem*{safemonolemma}{Safe-Mono}
+
+\begin{safemonolemma}
+  \makeatletter\def\@currentlabel{Safe-Mono}\makeatother
+  \label{lem:safemono}
+  $(\forall \val.\; \pred(\val) \implies \predB(\val)) \implies \Safe{\pred}(\expr) \implies \Safe{\predB}(\expr)$
+\end{safemonolemma}
+
+
+\begin{safevallemma}
+  \makeatletter\def\@currentlabel{Safe-Val}\makeatother
+  \label{lem:safeval}
+  $\pred(\val) \implies \Safe{\pred}(\val)$
+\end{safevallemma}
+
+\begin{safebindlemma}
+  \makeatletter\def\@currentlabel{Safe-Bind}\makeatother
+  \label{lem:safebind}
+  $\Safe{\predB}(\expr) \land (\forall \val.\; \predB(\val) \implies \Safe{\pred}(\ectx[\val])) \implies \Safe{\pred}(\ectx[\expr])$
+\end{safebindlemma}
+\begin{safesteplemma}
+  \makeatletter\def\@currentlabel{Safe-Step}\makeatother
+  \label{lem:safestep}
+  $\expr \step \expr' \land \Safe{\pred}(\expr') \implies \Safe{\pred}(\expr)$
+\end{safesteplemma}
+
+\subsection*{Logical Relations}
+\begin{align*}
+\semtyp{\semenv}{\CtxTps}{\tvar} \defeq{}& \semenv(\tvar)\\
+\semtyp{\semenv}{\CtxTps}{\UNT}(\val) \defeq{}& v = \TT\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \times \typ_2}(\val) \defeq{}& \exists \val_1, \val_2.\; \val = (\val_1, \val_2) \land
+\semtyp{\semenv}{\CtxTps}{\typ_1}(\val_1) \land \semtyp{\semenv}{\CtxTps}{\typ_1}(\val_2)\\
+\semtyp{\semenv}{\CtxTps}{\typ_1 \to \typ_2}(\val) \defeq{}& \exists \var, \expr.\; \val = \lambda \var.\; \expr \land
+\forall \val'.~\semtyp{\semenv}{\CtxTps}{\typ_1}(\val') \implies \semErel{\semtyp{\semenv}{\CtxTps}{\typ_2}}(\expr[\val'/\var])\\
+\semtyp{\semenv}{\CtxTps}{\forall \tvar.~\typ}(\val) \defeq{}& \exists \expr.\; \val = \TLam~\expr\land
+\forall \pred \in 2^{\VAL}.~\semErel{\semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}}(\expr)\\[0.5em]
+\semtyp{\semenv}{\CtxTps}{\cdot}(\mathit{vs}) \defeq{}& |\mathit{vs}| = 0\\
+\semtyp{\semenv}{\CtxTps}{\var : \typ, \Tctx}(\mathit{vs}) \defeq{}& \exists \val, \mathit{vs'}.\; \mathit{vs} = \val, \mathit{vs'} \land \semtyp{\semenv}{\CtxTps}{\typ}(\val) \land \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs'})\\
+\end{align*}
+
+\newtheorem*{logrelsubst}{LogRel-Subst}
+\begin{logrelsubst}
+  \makeatletter\def\@currentlabel{LogRel-Subst}\makeatother
+  \label{lem:logrelsubst}
+  $\semtyp{\semenv}{\CtxTps}{\typ[\typ'/\tvar]}(\val) \iff \semtyp{[\tvar \mapsto \semtyp{\semenv}{\CtxTps}{\typ'}]\semenv}{\tvar, \CtxTps}{\typ}(\val)$
+\end{logrelsubst}
+
+\newtheorem*{logrelweaken}{LogRel-Weaken}
+\begin{logrelweaken}
+  \makeatletter\def\@currentlabel{LogRel-Weaken}\makeatother
+  \label{lem:logrelweaken}
+  When $\tvar$ the \textbf{does not} appear freely in $\typ$,
+  $\semtyp{\semenv}{\CtxTps}{\typ}(\val) \iff \semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\typ}(\val)$
+\end{logrelweaken}
+\newtheorem*{logrelseqweaken}{LogRel-Seq-Weaken}
+\begin{logrelseqweaken}
+  \makeatletter\def\@currentlabel{LogRel-Seq-Weaken}\makeatother
+  \label{lem:logrelseqweaken}
+  When $\tvar$ the \textbf{does not} appear freely in $\Tctx$,
+  \[ \semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \iff \semtyp{[\tvar \mapsto \pred]\semenv}{\tvar, \CtxTps}{\Tctx}(\mathit{vs}) \]
+\end{logrelseqweaken}
+
+\newtheorem*{fundamentaltheorem}{Fundamental Theorem}
+
+\begin{fundamentaltheorem}[of logical relations]
+  \makeatletter\def\@currentlabel{Fundamental Theorem}\makeatother
+  \label{thm:fundamental}
+For any $e$, $\CtxTps$, $\Tctx$ and $\typ$ such that $\typed{\CtxTps}{\Tctx}{\expr}{\typ}$ we have:
+\[
+\forall \semenv, \mathit{vs}. ~\semtyp{\semenv}{\CtxTps}{\Tctx}(\mathit{vs}) \implies
+\semErel{\semtyp{\semenv}{\CtxTps}{\typ}}(\expr[\mathit{vs}/\mathit{xs}])
+\]
+where $\mathit{xs}$ is the sequence of variables of $\Tctx$ and $\expr[\mathit{vs}/\mathit{xs}]$ is a shorthand for $\expr[\val_1, \dots, \val_n/\var_1, \dots, \var_n]$ which is the term $\expr$ where $\var_i$'s are substituted with $\val_i$'s simultaneously.
+\end{fundamentaltheorem}
+
+\end{document}
